@@ -19,6 +19,7 @@ IdTransformer = (function(superClass) {
     var id;
     id = segment.ts_actual.valueOf();
     debug("Segment " + segment.id + " -> " + id + " from " + this.stream.key);
+    segment.realId = segment.id;
     segment.id = id;
     this.push(segment);
     return callback();

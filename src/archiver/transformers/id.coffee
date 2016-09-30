@@ -10,6 +10,7 @@ class IdTransformer extends require("stream").Transform
     _transform: (segment, encoding, callback) ->
         id = segment.ts_actual.valueOf()
         debug "Segment #{segment.id} -> #{id} from #{@stream.key}"
+        segment.realId = segment.id
         segment.id = id
         @push segment
         callback()
