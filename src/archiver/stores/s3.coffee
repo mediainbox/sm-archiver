@@ -14,10 +14,18 @@ class S3Store
 
     #----------
 
-    getAudioById: (id, format) ->
-        return P.resolve() if format != @format
-        @getFile("audio/#{id}.#{format}") \
+    getAudioById: (id, format) =>
+        return P.resolve() if format and format != @format
+        @getFile("audio/#{id}.#{format or @format}") \
             .then (data) => data.Body
+
+    #----------
+
+    getAudiosByIds: (ids) ->
+        return P.map(
+            ids, (id) => @getAudioById(id).catch(->)
+        )
+        .filter (audio) -> audio
 
     #----------
 

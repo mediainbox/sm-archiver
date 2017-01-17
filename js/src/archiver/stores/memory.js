@@ -89,6 +89,10 @@ MemoryStore = (function() {
     return this.getMany(options, "comment");
   };
 
+  MemoryStore.prototype.getAudios = function(options) {
+    return this.getMany(options, "audio");
+  };
+
   MemoryStore.prototype.getMany = function(options, attribute) {
     var first, from, last, segments, to;
     first = _.first(this.index);

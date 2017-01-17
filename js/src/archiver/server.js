@@ -1,4 +1,4 @@
-var ClipExporter, Server, bodyParser, compression, cors, debug, express, moment, onHeaders;
+var Server, bodyParser, compression, cors, debug, express, moment, onHeaders;
 
 cors = require("cors");
 
@@ -11,8 +11,6 @@ onHeaders = require("on-headers");
 bodyParser = require("body-parser");
 
 compression = require("compression");
-
-ClipExporter = require("./clip_exporter");
 
 debug = require("debug")("sm:archiver:server");
 
@@ -277,11 +275,45 @@ Server = (function() {
         });
       };
     })(this));
-    this.app.get("/:stream/export", (function(_this) {
+    this.app.get("/:stream/export", compression({
+      filter: function() {
+        return true;
+      }
+    }), (function(_this) {
       return function(req, res) {
-        return new ClipExporter(req.stream, {
-          req: req,
-          res: res
+        var ref, ref1;
+        if (!((ref = _this.options.outputs) != null ? (ref1 = ref["export"]) != null ? ref1.enabled : void 0 : void 0) || !req.stream.archiver || !req.query.from || !req.query.to) {
+          return res.status(404).json({
+            status: 404,
+            error: "Stream not archived"
+          });
+        }
+        return req.stream.archiver.getExport(req.query, function(error, exp) {
+          if (error) {
+            return res.status(500).json({
+              status: 500,
+              error: error
+            });
+          } else if (!exp || !exp.length) {
+            return res.status(404).json({
+              status: 404,
+              error: "Export not found"
+            });
+          } else {
+            if (req.stream.opts.format === "mp3") {
+              res.set("Content-Type", "audio/mpeg");
+            } else if (req.stream.opts.format === "aac") {
+              res.set("Content-Type", "audio/aacp");
+            } else {
+              res.set("Content-Type", "unknown");
+            }
+            res.set("Connection", "close");
+            res.set("Content-Length", exp.size);
+            res.set("X-Archiver-Export-Length", exp.length);
+            res.set("Content-Disposition", "attachment; filename=\"" + exp.filename + "\"");
+            res.set("X-Archiver-Filename", exp.filename);
+            return exp.pipe(res).end();
+          }
         });
       };
     })(this));

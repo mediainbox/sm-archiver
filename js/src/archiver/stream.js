@@ -1,4 +1,4 @@
-var AudioTransformer, ElasticsearchStore, ElasticsearchStoreTransformer, HlsOutput, IdTransformer, MemoryStore, MemoryStoreTransformer, PreviewTransformer, QueueMemoryStoreTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, segmentKeys,
+var AudioTransformer, ElasticsearchStore, ElasticsearchStoreTransformer, ExportOutput, HlsOutput, IdTransformer, MemoryStore, MemoryStoreTransformer, PreviewTransformer, QueueMemoryStoreTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, segmentKeys,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
@@ -29,6 +29,8 @@ S3Store = require("./stores/s3");
 S3StoreTransformer = require("./transformers/stores/s3");
 
 HlsOutput = require("./outputs/hls");
+
+ExportOutput = require("./outputs/export");
 
 debug = require("debug")("sm:archiver:stream");
 
@@ -111,7 +113,7 @@ StreamArchiver = (function(superClass) {
         if (error || (segments && segments.length)) {
           return cb(error, segments);
         }
-        return _this.getSegmentsFromElasticsearch(options, function(error, segments) {
+        return _this.getSegmentsFromElasticsearch(options, null, function(error, segments) {
           if (error || (segments && segments.length)) {
             return cb(error, segments);
           }
@@ -128,11 +130,11 @@ StreamArchiver = (function(superClass) {
     return cb(null, this.stores.memory.getSegments(options));
   };
 
-  StreamArchiver.prototype.getSegmentsFromElasticsearch = function(options, cb) {
+  StreamArchiver.prototype.getSegmentsFromElasticsearch = function(options, attribute, cb) {
     if (!this.stores.elasticsearch) {
       return cb();
     }
-    return this.stores.elasticsearch.getSegments(options).then(function(segments) {
+    return this.stores.elasticsearch.getSegments(options, attribute).then(function(segments) {
       return cb(null, segments);
     })["catch"](function() {
       return cb();
@@ -276,6 +278,47 @@ StreamArchiver = (function(superClass) {
     });
   };
 
+  StreamArchiver.prototype.getAudios = function(options, cb) {
+    return this.getAudiosFromMemory(options, (function(_this) {
+      return function(error, audios) {
+        if (error || (audios && audios.length)) {
+          return cb(error, audios);
+        }
+        return _this.getAudiosFromS3(options, function(error, audios) {
+          if (error || (audios && audios.length)) {
+            return cb(error, audios);
+          }
+          return cb(null, []);
+        });
+      };
+    })(this));
+  };
+
+  StreamArchiver.prototype.getAudiosFromMemory = function(options, cb) {
+    if (!this.stores.memory) {
+      return cb();
+    }
+    return cb(null, this.stores.memory.getAudios(options));
+  };
+
+  StreamArchiver.prototype.getAudiosFromS3 = function(options, cb) {
+    if (!this.stores.s3) {
+      return cb();
+    }
+    return this.getSegmentsFromElasticsearch(options, "id", (function(_this) {
+      return function(error, segments) {
+        if (error || !segments || !segments.length) {
+          return cb(error, []);
+        }
+        return _this.stores.s3.getAudiosByIds(segments).then(function(audios) {
+          return cb(null, audios);
+        })["catch"](function(error) {
+          return cb(error);
+        });
+      };
+    })(this));
+  };
+
   StreamArchiver.prototype.getComment = function(id, cb) {
     this.getCommentFromMemory(id, (function(_this) {
       return function(error, comment) {
@@ -373,6 +416,28 @@ StreamArchiver = (function(superClass) {
     hls = new HlsOutput(this.stream);
     try {
       return cb(null, hls.append(segments).end());
+    } catch (error1) {
+      error = error1;
+      return cb(error);
+    }
+  };
+
+  StreamArchiver.prototype.getExport = function(options, cb) {
+    return this.getAudios(options, (function(_this) {
+      return function(error, audios) {
+        if (error || !audios || !audios.length) {
+          return cb(error, audios);
+        }
+        return _this.generateExport(audios, cb);
+      };
+    })(this));
+  };
+
+  StreamArchiver.prototype.generateExport = function(audios, cb) {
+    var error, error1, exp;
+    exp = new ExportOutput(this.stream);
+    try {
+      return cb(null, exp.append(audios));
     } catch (error1) {
       error = error1;
       return cb(error);

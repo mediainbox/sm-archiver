@@ -12,6 +12,7 @@ ElasticsearchStoreTransformer = require "./transformers/stores/elasticsearch"
 S3Store = require "./stores/s3"
 S3StoreTransformer = require "./transformers/stores/s3"
 HlsOutput = require "./outputs/hls"
+ExportOutput = require "./outputs/export"
 debug = require("debug") "sm:archiver:stream"
 segmentKeys = [
     "id",
@@ -79,21 +80,21 @@ class StreamArchiver extends require("events").EventEmitter
     getSegments: (options, cb) ->
         @getSegmentsFromMemory options, (error, segments) =>
             return cb error, segments if error or (segments and segments.length)
-            @getSegmentsFromElasticsearch options, (error, segments) =>
+            @getSegmentsFromElasticsearch options, null, (error, segments) =>
                 return cb error, segments if error or (segments and segments.length)
                 return cb null, []
 
     #----------
 
     getSegmentsFromMemory: (options, cb) ->
-        return cb() if !@stores.memory
+        return cb() if not @stores.memory
         cb null, @stores.memory.getSegments(options)
 
     #----------
 
-    getSegmentsFromElasticsearch: (options, cb) ->
-        return cb() if !@stores.elasticsearch
-        @stores.elasticsearch.getSegments(options)
+    getSegmentsFromElasticsearch: (options, attribute, cb) ->
+        return cb() if not @stores.elasticsearch
+        @stores.elasticsearch.getSegments(options, attribute)
         .then((segments) -> return cb null, segments)
         .catch(() -> cb())
 
@@ -108,13 +109,13 @@ class StreamArchiver extends require("events").EventEmitter
     #----------
 
     getSegmentFromMemory: (id, cb) ->
-        return cb() if !@stores.memory
+        return cb() if not @stores.memory
         cb null, @stores.memory.getSegment(id)
 
     #----------
 
     getSegmentFromElasticsearch: (id, cb) ->
-        return cb() if !@stores.elasticsearch
+        return cb() if not @stores.elasticsearch
         @stores.elasticsearch.getSegment(id)
         .then((segment) -> return cb null, segment)
         .catch(() -> cb())
@@ -155,13 +156,13 @@ class StreamArchiver extends require("events").EventEmitter
     #----------
 
     getWaveformFromMemory: (id, cb) ->
-        return cb() if !@stores.memory
+        return cb() if not @stores.memory
         cb null, @stores.memory.getWaveform(id)
 
     #----------
 
     getWaveformFromElasticsearch: (id, cb) ->
-        return cb() if !@stores.elasticsearch
+        return cb() if not @stores.elasticsearch
         @stores.elasticsearch.getSegment(id) \
             .then((segment) -> return cb null, segment?.waveform) \
             .catch(() -> cb())
@@ -176,16 +177,41 @@ class StreamArchiver extends require("events").EventEmitter
     #----------
 
     getAudioFromMemory: (id, format, cb) ->
-        return cb() if !@stores.memory
+        return cb() if not @stores.memory
         cb null, @stores.memory.getAudio(id)
 
     #----------
 
     getAudioFromS3: (id, format, cb) ->
-        return cb() if !@stores.s3
+        return cb() if not @stores.s3
         @stores.s3.getAudioById(id, format) \
             .then((audio) -> return cb null, audio) \
             .catch(() -> cb())
+
+    #----------
+
+    getAudios: (options, cb) ->
+        @getAudiosFromMemory options, (error, audios) =>
+            return cb error, audios if error or (audios and audios.length)
+            @getAudiosFromS3 options, (error, audios) =>
+                return cb error, audios if error or (audios and audios.length)
+                return cb null, []
+
+    #----------
+
+    getAudiosFromMemory: (options, cb) ->
+        return cb() if not @stores.memory
+        cb null, @stores.memory.getAudios(options)
+
+    #----------
+
+    getAudiosFromS3: (options, cb) ->
+        return cb() if not @stores.s3
+        @getSegmentsFromElasticsearch options, "id", (error, segments) =>
+            return cb error, [] if error or not segments or not segments.length
+            @stores.s3.getAudiosByIds(segments)
+                .then((audios) -> return cb null, audios)
+                .catch((error) -> cb(error))
 
     #----------
 
@@ -197,13 +223,13 @@ class StreamArchiver extends require("events").EventEmitter
     #----------
 
     getCommentFromMemory: (id, cb) ->
-        return cb() if !@stores.memory
+        return cb() if not @stores.memory
         cb null, @stores.memory.getComment(id)
 
     #----------
 
     getCommentFromElasticsearch: (id, cb) ->
-        return cb() if !@stores.elasticsearch
+        return cb() if not @stores.elasticsearch
         @stores.elasticsearch.getSegment(id) \
         .then((segment) -> return cb null, segment?.comment) \
         .catch(() -> cb())
@@ -218,7 +244,7 @@ class StreamArchiver extends require("events").EventEmitter
     #----------
 
     getCommentsFromElasticsearch: (options, cb) ->
-        return cb() if !@stores.elasticsearch
+        return cb() if not @stores.elasticsearch
         @stores.elasticsearch.getComments(options) \
         .then((comments) => cb null, comments)
         .catch cb
@@ -233,14 +259,14 @@ class StreamArchiver extends require("events").EventEmitter
     #----------
 
     saveCommentToMemory: (comment, cb) ->
-        return cb null, comment if !@stores.memory
+        return cb null, comment if not @stores.memory
         @stores.memory.storeComment comment
         cb null, comment
 
     #----------
 
     saveCommentToElasticsearch: (comment, cb) ->
-        return cb null, comment if !@stores.elasticsearch
+        return cb null, comment if not @stores.elasticsearch
         @stores.elasticsearch.indexComment(comment) \
         .then(() => cb null, comment)
         .catch cb
@@ -258,6 +284,22 @@ class StreamArchiver extends require("events").EventEmitter
         hls = new HlsOutput @stream
         try
             cb null, hls.append(segments).end()
+        catch error
+            cb error
+
+    #----------
+
+    getExport: (options, cb) ->
+        @getAudios options, (error, audios) =>
+            return cb error, audios if error or not audios or not audios.length
+            @generateExport audios, cb
+
+    #----------
+
+    generateExport: (audios, cb) ->
+        exp = new ExportOutput @stream
+        try
+            cb null, exp.append(audios)
         catch error
             cb error
 

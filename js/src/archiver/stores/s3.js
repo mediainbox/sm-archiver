@@ -1,4 +1,5 @@
-var AWS, P, S3Store, _, debug, moment;
+var AWS, P, S3Store, _, debug, moment,
+  bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
 P = require("bluebird");
 
@@ -14,6 +15,7 @@ S3Store = (function() {
   function S3Store(stream, options1) {
     this.stream = stream;
     this.options = options1;
+    this.getAudioById = bind(this.getAudioById, this);
     _.extend(this, new AWS.S3(this.options));
     P.promisifyAll(this);
     this.prefix = "sm-archiver/" + this.stream.key;
@@ -22,14 +24,24 @@ S3Store = (function() {
   }
 
   S3Store.prototype.getAudioById = function(id, format) {
-    if (format !== this.format) {
+    if (format && format !== this.format) {
       return P.resolve();
     }
-    return this.getFile("audio/" + id + "." + format).then((function(_this) {
+    return this.getFile("audio/" + id + "." + (format || this.format)).then((function(_this) {
       return function(data) {
         return data.Body;
       };
     })(this));
+  };
+
+  S3Store.prototype.getAudiosByIds = function(ids) {
+    return P.map(ids, (function(_this) {
+      return function(id) {
+        return _this.getAudioById(id)["catch"](function() {});
+      };
+    })(this)).filter(function(audio) {
+      return audio;
+    });
   };
 
   S3Store.prototype.getFile = function(key) {

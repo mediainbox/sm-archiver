@@ -67,8 +67,8 @@ class ElasticsearchStore
 
     #----------
 
-    getSegments: (options) ->
-        @getMany "segment", options
+    getSegments: (options, attribute) ->
+        @getMany "segment", options, attribute
 
     #----------
 
