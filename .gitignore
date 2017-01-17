@@ -6,3 +6,6 @@ node_modules
 
 #config
 config/testing.json
+
+#mac
+.DS_Store

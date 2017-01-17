@@ -85,8 +85,8 @@ ElasticsearchStore = (function() {
     })(this));
   };
 
-  ElasticsearchStore.prototype.getSegments = function(options) {
-    return this.getMany("segment", options);
+  ElasticsearchStore.prototype.getSegments = function(options, attribute) {
+    return this.getMany("segment", options, attribute);
   };
 
   ElasticsearchStore.prototype.getComments = function(options) {

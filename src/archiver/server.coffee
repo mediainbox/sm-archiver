@@ -4,7 +4,6 @@ express = require "express"
 onHeaders = require "on-headers"
 bodyParser = require "body-parser"
 compression = require "compression"
-ClipExporter = require "./clip_exporter"
 debug = require("debug") "sm:archiver:server"
 
 class Server
@@ -131,9 +130,24 @@ class Server
                 else
                     res.json comment
 
-        @app.get "/:stream/export", (req,res) =>
-            new ClipExporter req.stream, req:req, res:res
-            #new @core.Outputs.pumper req.stream, req:req, res:res
+        @app.get "/:stream/export", compression(filter: -> true), (req, res) =>
+            if not @options.outputs?.export?.enabled or not req.stream.archiver or not req.query.from or not req.query.to
+                return res.status(404).json status: 404, error: "Stream not archived"
+            req.stream.archiver.getExport req.query, (error, exp) =>
+                if error
+                    res.status(500).json status: 500, error: error
+                else if not exp or not exp.length
+                    res.status(404).json status: 404, error: "Export not found"
+                else
+                    if req.stream.opts.format == "mp3" then res.set "Content-Type", "audio/mpeg"
+                    else if req.stream.opts.format == "aac" then res.set "Content-Type", "audio/aacp"
+                    else res.set "Content-Type", "unknown"
+                    res.set "Connection", "close"
+                    res.set "Content-Length", exp.size
+                    res.set "X-Archiver-Export-Length", exp.length
+                    res.set "Content-Disposition", "attachment; filename=\"#{exp.filename}\""
+                    res.set "X-Archiver-Filename", exp.filename
+                    exp.pipe(res).end()
 
         @_server = @app.listen @options.port,() =>
             debug "Listing on port #{@options.port}"

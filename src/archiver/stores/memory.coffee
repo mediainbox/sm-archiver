@@ -84,6 +84,11 @@ class MemoryStore
 
     #----------
 
+    getAudios: (options) ->
+        @getMany options, "audio"
+
+    #----------
+
     getMany: (options, attribute) ->
         first = _.first @index
         last = _.last @index
