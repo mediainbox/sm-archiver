@@ -15,6 +15,9 @@ S3Store = (function() {
   function S3Store(stream, options1) {
     this.stream = stream;
     this.options = options1;
+    this.deleteExport = bind(this.deleteExport, this);
+    this.putExport = bind(this.putExport, this);
+    this.getExportById = bind(this.getExportById, this);
     this.getAudioById = bind(this.getAudioById, this);
     _.extend(this, new AWS.S3(this.options));
     P.promisifyAll(this);
@@ -44,6 +47,25 @@ S3Store = (function() {
     });
   };
 
+  S3Store.prototype.getExportById = function(id, format) {
+    if (format && format !== this.format) {
+      return P.resolve();
+    }
+    return this.getFile("exports/" + id + "." + (format || this.format)).then((function(_this) {
+      return function(data) {
+        return data.Body;
+      };
+    })(this));
+  };
+
+  S3Store.prototype.putExport = function(exp, options) {
+    return this.putFile("exports/" + exp.id + "." + this.format, exp.concat(), options);
+  };
+
+  S3Store.prototype.deleteExport = function(id, options) {
+    return this.deleteFile("exports/" + id + "." + this.stream.opts.format);
+  };
+
   S3Store.prototype.getFile = function(key) {
     key = this.prefix + "/" + key;
     debug("Getting " + key);
@@ -57,8 +79,9 @@ S3Store = (function() {
     })(this));
   };
 
-  S3Store.prototype.putFileIfNotExists = function(key, body, options) {
-    key = this.prefix + "/" + key;
+  S3Store.prototype.putFileIfNotExists = function(name, body, options) {
+    var key;
+    key = this.prefix + "/" + name;
     return this.headObjectAsync({
       Key: key
     }).then((function(_this) {
@@ -67,18 +90,35 @@ S3Store = (function() {
       };
     })(this))["catch"]((function(_this) {
       return function(error) {
-        if (error.statusCode === 404) {
-          debug("Storing " + key);
-          return _this.putObjectAsync(_.extend({}, options || {}, {
-            Key: key,
-            Body: body
-          }))["catch"](function(error) {
-            return debug("PUT Error for " + key + ": " + error);
-          });
+        if (error.statusCode !== 404) {
+          return debug("HEAD Error for " + key + ": " + error);
         }
-        return debug("HEAD Error for " + key + ": " + error);
+        return _this.putFile(name, body, options);
       };
     })(this));
+  };
+
+  S3Store.prototype.putFile = function(name, body, options) {
+    var key;
+    key = this.prefix + "/" + name;
+    debug("Storing " + key);
+    return this.putObjectAsync(_.extend({}, options || {}, {
+      Key: key,
+      Body: body
+    }))["catch"](function(error) {
+      return debug("PUT Error for " + key + ": " + error);
+    });
+  };
+
+  S3Store.prototype.deleteFile = function(name, options) {
+    var key;
+    key = this.prefix + "/" + name;
+    debug("Deleting " + key);
+    return this.deleteObjectAsync(_.extend({}, options || {}, {
+      Key: key
+    }))["catch"](function(error) {
+      return debug("DELETE Error for " + key + ": " + error);
+    });
   };
 
   return S3Store;

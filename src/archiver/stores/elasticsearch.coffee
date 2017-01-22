@@ -17,6 +17,12 @@ segmentKeys = [
     "waveform",
     "comment"
 ]
+exportKeys = [
+    "id",
+    "format",
+    "to",
+    "from"
+]
 
 class ElasticsearchStore
     constructor: (@stream, options) ->
@@ -37,6 +43,16 @@ class ElasticsearchStore
 
     #----------
 
+    indexExport: (exp) ->
+        @indexOne "export", exp.id, _.pick(exp, exportKeys)
+
+    #----------
+
+    deleteExport: (id) ->
+        @deleteOne "export", id
+
+    #----------
+
     indexOne: (type, id, body) ->
         debug "Indexing #{type} #{id}"
         @index(index: @stream.key, type: type, id: id, body: body) \
@@ -47,9 +63,9 @@ class ElasticsearchStore
 
     updateOne: (type, id, doc) ->
         debug "Updating #{type} #{id}"
-        @update(index: @stream.key, type: type, id: id, body: doc: doc) \
-        .catch (error) =>
-            debug "UPDATE #{type} Error for #{@stream.key}/#{id}: #{error}"
+        @update(index: @stream.key, type: type, id: id, body: doc: doc)
+            .catch (error) =>
+                debug "UPDATE #{type} Error for #{@stream.key}/#{id}: #{error}"
 
     #----------
 
@@ -61,9 +77,17 @@ class ElasticsearchStore
     getOne: (type, id, fields) ->
         debug "Getting #{type} #{id} from #{@stream.key}"
         @get(index: @stream.key, type: type, id: id, fields: fields)
-        .then((result) => result._source ) \
-        .catch (error) =>
-            debug "GET #{type} Error for #{@stream.key}/#{id}: #{error}"
+            .then((result) => result._source )
+            .catch (error) =>
+                debug "GET #{type} Error for #{@stream.key}/#{id}: #{error}"
+
+    #----------
+
+    deleteOne: (type, id) ->
+        debug "Deleting #{type} #{id} from #{@stream.key}"
+        @delete(index: @stream.key, type: type, id: id)
+            .catch (error) =>
+                debug "DELETE #{type} Error for #{@stream.key}/#{id}: #{error}"
 
     #----------
 
@@ -77,26 +101,39 @@ class ElasticsearchStore
 
     #----------
 
+    getExports: (options) ->
+        @getMany "export", options
+
+    #----------
+
     getMany: (type, options, attribute) ->
         first = moment().subtract(@hours, 'hours').valueOf()
         last = moment().valueOf()
         from = @parseId options.from, first
         to = @parseId options.to, last
         debug "Searching #{attribute or type} #{from} -> #{to} from #{@stream.key}"
+        query = {
+            range: {
+                id: {
+                    gte: from,
+                    lt: to
+                }
+            }
+        }
+        if options.allowUnlimited and not options.from and not options.to
+            query = undefined
+        else if options.from or options.to
+            query.range.id.gte = options.from
+            query.range.id.lt = options.to or last
+        debug query
         @search(index: @stream.key, type: type, body: {
             size: @options.size,
             sort: "id",
-            query: {
-                range: {
-                    id: {
-                        gte: from,
-                        lt: to
-                    }
-                }
-            }
+            query: query
         })
         .then((result) =>
             P.map(result.hits.hits, (hit) =>
+                debug hit
                 if attribute then hit._source?[attribute] else hit._source
             )
         )

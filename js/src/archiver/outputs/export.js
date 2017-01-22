@@ -10,9 +10,10 @@ PassThrough = require("stream").PassThrough;
 debug = require("debug")("sm:archiver:outputs:export");
 
 ExportOutput = (function() {
-  function ExportOutput(stream) {
+  function ExportOutput(stream, options) {
     this.stream = stream;
     this.onEnd = bind(this.onEnd, this);
+    this.id = moment().valueOf();
     this.passThrough = new PassThrough({
       objectMode: true
     });
@@ -20,8 +21,10 @@ ExportOutput = (function() {
     this.length = 0;
     this.max = 360;
     this.size = 0;
-    this.filename = this.stream.key + "-" + (moment().valueOf()) + "." + this.stream.opts.format;
+    this.format = this.stream.opts.format;
+    this.filename = this.stream.key + "-" + this.id + "." + this.format;
     this.passThrough.on("end", this.onEnd);
+    _.extend(this, options);
     debug("Created for " + this.stream.key);
   }
 
@@ -58,6 +61,10 @@ ExportOutput = (function() {
     this.ended = true;
     debug("Ended for " + this.stream.key);
     return this;
+  };
+
+  ExportOutput.prototype.concat = function() {
+    return Buffer.concat(this.audios);
   };
 
   return ExportOutput;
