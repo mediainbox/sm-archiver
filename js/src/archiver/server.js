@@ -1,4 +1,4 @@
-var Server, _, bodyParser, compression, cors, debug, express, moment, onHeaders;
+var Server, _, bodyParser, compression, cors, debug, exportKeys, express, moment, onHeaders;
 
 cors = require("cors");
 
@@ -15,6 +15,8 @@ bodyParser = require("body-parser");
 compression = require("compression");
 
 debug = require("debug")("sm:archiver:server");
+
+exportKeys = ["id", "format", "to", "from"];
 
 Server = (function() {
   function Server(core, options, log) {
@@ -350,9 +352,7 @@ Server = (function() {
               error: "Export not found"
             });
           } else {
-            return res.send({
-              filename: exp.filename
-            });
+            return res.send(_.pick(exp, exportKeys));
           }
         });
       };
