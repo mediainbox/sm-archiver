@@ -6,6 +6,12 @@ onHeaders = require "on-headers"
 bodyParser = require "body-parser"
 compression = require "compression"
 debug = require("debug") "sm:archiver:server"
+exportKeys = [
+    "id",
+    "format",
+    "to",
+    "from"
+]
 
 class Server
     constructor: (@core, @options, @log) ->
@@ -162,7 +168,7 @@ class Server
                 else if not exp or not exp.length
                     res.status(404).json status: 404, error: "Export not found"
                 else
-                    res.send filename: exp.filename
+                    res.send _.pick exp, exportKeys
 
         @app.get "/:stream/export/:id", (req, res) =>
             if not @options.outputs?.export?.enabled or not req.stream.archiver

@@ -14,7 +14,7 @@ R_TIMESTAMP = /^[1-9][0-9]*$/;
 
 segmentKeys = ["id", "ts", "end_ts", "ts_actual", "end_ts_actual", "data_length", "duration", "discontinuitySeq", "pts", "waveform", "comment"];
 
-exportKeys = ["id", "format", "filename", "to", "from"];
+exportKeys = ["id", "format", "to", "from"];
 
 ElasticsearchStore = (function() {
   function ElasticsearchStore(stream, options) {
