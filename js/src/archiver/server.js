@@ -1,6 +1,8 @@
-var Server, bodyParser, compression, cors, debug, express, moment, onHeaders;
+var Server, _, bodyParser, compression, cors, debug, express, moment, onHeaders;
 
 cors = require("cors");
+
+_ = require("underscore");
 
 moment = require("moment");
 
@@ -76,7 +78,7 @@ Server = (function() {
           if (error) {
             return res.status(500).json({
               status: 500,
-              error: error
+              error: (error != null ? error.stack : void 0) || error
             });
           } else if (!hls || !hls.length) {
             return res.status(404).json({
@@ -105,7 +107,7 @@ Server = (function() {
           if (error) {
             return res.status(500).json({
               status: 500,
-              error: error
+              error: (error != null ? error.stack : void 0) || error
             });
           } else if (!audio) {
             return res.status(404).json({
@@ -140,7 +142,7 @@ Server = (function() {
           if (error) {
             return res.status(500).json({
               status: 500,
-              error: error
+              error: (error != null ? error.stack : void 0) || error
             });
           } else if (!preview) {
             return res.status(404).json({
@@ -166,7 +168,7 @@ Server = (function() {
           if (error) {
             return res.status(500).json({
               status: 500,
-              error: error
+              error: (error != null ? error.stack : void 0) || error
             });
           } else if (!segment) {
             return res.status(404).json({
@@ -191,7 +193,7 @@ Server = (function() {
           if (error) {
             return res.status(500).json({
               status: 500,
-              error: error
+              error: (error != null ? error.stack : void 0) || error
             });
           } else if (!waveform) {
             return res.status(404).json({
@@ -216,7 +218,7 @@ Server = (function() {
           if (error) {
             return res.status(500).json({
               status: 500,
-              error: error
+              error: (error != null ? error.stack : void 0) || error
             });
           } else {
             return res.json(comment);
@@ -236,7 +238,7 @@ Server = (function() {
           if (error) {
             return res.status(500).json({
               status: 500,
-              error: error
+              error: (error != null ? error.stack : void 0) || error
             });
           } else if (!comments) {
             return res.status(404).json({
@@ -262,7 +264,7 @@ Server = (function() {
           if (error) {
             return res.status(500).json({
               status: 500,
-              error: error
+              error: (error != null ? error.stack : void 0) || error
             });
           } else if (!comment) {
             return res.status(404).json({
@@ -282,17 +284,22 @@ Server = (function() {
     }), (function(_this) {
       return function(req, res) {
         var ref, ref1;
-        if (!((ref = _this.options.outputs) != null ? (ref1 = ref["export"]) != null ? ref1.enabled : void 0 : void 0) || !req.stream.archiver || !req.query.from || !req.query.to) {
+        if (!((ref = _this.options.outputs) != null ? (ref1 = ref["export"]) != null ? ref1.enabled : void 0 : void 0) || !req.stream.archiver) {
           return res.status(404).json({
             status: 404,
             error: "Stream not archived"
+          });
+        } else if (!req.query.from || !req.query.to) {
+          return res.status(400).json({
+            status: 400,
+            error: "Missing parameters"
           });
         }
         return req.stream.archiver.getExport(req.query, function(error, exp) {
           if (error) {
             return res.status(500).json({
               status: 500,
-              error: error
+              error: (error != null ? error.stack : void 0) || error
             });
           } else if (!exp || !exp.length) {
             return res.status(404).json({
@@ -313,6 +320,107 @@ Server = (function() {
             res.set("Content-Disposition", "attachment; filename=\"" + exp.filename + "\"");
             res.set("X-Archiver-Filename", exp.filename);
             return exp.pipe(res).end();
+          }
+        });
+      };
+    })(this));
+    this.app.post("/:stream/export", (function(_this) {
+      return function(req, res) {
+        var ref, ref1;
+        if (!((ref = _this.options.outputs) != null ? (ref1 = ref["export"]) != null ? ref1.enabled : void 0 : void 0) || !req.stream.archiver) {
+          return res.status(404).json({
+            status: 404,
+            error: "Stream not archived"
+          });
+        } else if (!req.query.from || !req.query.to) {
+          return res.status(400).json({
+            status: 400,
+            error: "Missing parameters"
+          });
+        }
+        return req.stream.archiver.saveExport(req.query, function(error, exp) {
+          if (error) {
+            return res.status(500).json({
+              status: 500,
+              error: (error != null ? error.stack : void 0) || error
+            });
+          } else if (!exp || !exp.length) {
+            return res.status(404).json({
+              status: 404,
+              error: "Export not found"
+            });
+          } else {
+            return res.send({
+              filename: exp.filename
+            });
+          }
+        });
+      };
+    })(this));
+    this.app.get("/:stream/export/:id", (function(_this) {
+      return function(req, res) {
+        var ref, ref1;
+        if (!((ref = _this.options.outputs) != null ? (ref1 = ref["export"]) != null ? ref1.enabled : void 0 : void 0) || !req.stream.archiver) {
+          return res.status(404).json({
+            status: 404,
+            error: "Stream not archived"
+          });
+        }
+        return req.stream.archiver.getExportById(req.params.id, function(error, exp) {
+          if (error) {
+            return res.status(500).json({
+              status: 500,
+              error: (error != null ? error.stack : void 0) || error
+            });
+          } else {
+            res.type(req.stream.opts.format);
+            return res.send(exp);
+          }
+        });
+      };
+    })(this));
+    this.app["delete"]("/:stream/export/:id", (function(_this) {
+      return function(req, res) {
+        var ref, ref1;
+        if (!((ref = _this.options.outputs) != null ? (ref1 = ref["export"]) != null ? ref1.enabled : void 0 : void 0) || !req.stream.archiver) {
+          return res.status(404).json({
+            status: 404,
+            error: "Stream not archived"
+          });
+        }
+        return req.stream.archiver.deleteExport(req.params.id, function(error) {
+          if (error) {
+            return res.status(500).json({
+              status: 500,
+              error: (error != null ? error.stack : void 0) || error
+            });
+          } else {
+            return res.send({
+              message: "ok"
+            });
+          }
+        });
+      };
+    })(this));
+    this.app.get("/:stream/exports", (function(_this) {
+      return function(req, res) {
+        var ref, ref1;
+        if (!((ref = _this.options.outputs) != null ? (ref1 = ref["export"]) != null ? ref1.enabled : void 0 : void 0) || !req.stream.archiver) {
+          return res.status(404).json({
+            status: 404,
+            error: "Stream not archived"
+          });
+        }
+        return req.stream.archiver.getExports(_.extend(req.query, {
+          allowUnlimited: true
+        }), function(error, exports) {
+          if (error) {
+            return res.status(500).json({
+              status: 500,
+              error: (error != null ? error.stack : void 0) || error
+            });
+          } else {
+            return res.send(exports);
           }
         });
       };

@@ -1,4 +1,5 @@
 cors = require "cors"
+_ = require "underscore"
 moment = require "moment"
 express = require "express"
 onHeaders = require "on-headers"
@@ -38,7 +39,7 @@ class Server
                 return res.status(404).json status: 404, error: "Stream not archived"
             req.stream.archiver.getHls req.query, (error, hls) =>
                 if error
-                    res.status(500).json status: 500, error: error
+                    res.status(500).json status: 500, error: error?.stack or error
                 else if not hls or not hls.length
                     res.status(404).json status: 404, error: "Hls not found"
                 else
@@ -53,7 +54,7 @@ class Server
                 return res.status(404).json status: 404, error: "Stream not archived"
             req.stream.archiver.getAudio req.params.segment, req.params.format, (error, audio) =>
                 if error
-                    res.status(500).json status: 500, error: error
+                    res.status(500).json status: 500, error: error?.stack or error
                 else if not audio
                     res.status(404).json status: 404, error: "Audio not found"
                 else
@@ -68,20 +69,19 @@ class Server
                 return res.status(404).json status: 404, error: "Stream not archived"
             req.stream.archiver.getPreview req.query, (error, preview) =>
                 if error
-                    res.status(500).json status: 500, error: error
+                    res.status(500).json status: 500, error: error?.stack or error
                 else if not preview
                     res.status(404).json status: 404, error: "Preview not found"
                 else
                     res.set "X-Archiver-Preview-Length", preview.length
                     res.json preview
 
-
         @app.get "/:stream/segments/:segment", (req, res) =>
             if not req.stream.archiver
                 return res.status(404).json status: 404, error: "Stream not archived"
             req.stream.archiver.getSegment req.params.segment, (error, segment) =>
                 if error
-                    res.status(500).json status: 500, error: error
+                    res.status(500).json status: 500, error: error?.stack or error
                 else if not segment
                     res.status(404).json status: 404, error: "Segment not found"
                 else
@@ -92,7 +92,7 @@ class Server
                 return res.status(404).json status: 404, error: "Stream not archived"
             req.stream.archiver.getWaveform req.params.segment, (error, waveform) =>
                 if error
-                    res.status(500).json status: 500, error: error
+                    res.status(500).json status: 500, error: error?.stack or error
                 else if not waveform
                     res.status(404).json status: 404, error: "Waveform not found"
                 else
@@ -103,7 +103,7 @@ class Server
                 return res.status(404).json status: 404, error: "Stream not archived"
             req.stream.archiver.saveComment req.body, (error, comment) =>
                 if error
-                    res.status(500).json status: 500, error: error
+                    res.status(500).json status: 500, error: error?.stack or error
                 else
                     res.json comment
 
@@ -112,7 +112,7 @@ class Server
                 return res.status(404).json status: 404, error: "Stream not archived"
             req.stream.archiver.getComments req.query, (error, comments) =>
                 if error
-                    res.status(500).json status: 500, error: error
+                    res.status(500).json status: 500, error: error?.stack or error
                 else if not comments
                     res.status(404).json status: 404, error: "Comments not found"
                 else
@@ -124,18 +124,20 @@ class Server
                 return res.status(404).json status: 404, error: "Stream not archived"
             req.stream.archiver.getComment req.params.comment, (error, comment) =>
                 if error
-                    res.status(500).json status: 500, error: error
+                    res.status(500).json status: 500, error: error?.stack or error
                 else if not comment
                     res.status(404).json status: 404, error: "Comment not found"
                 else
                     res.json comment
 
         @app.get "/:stream/export", compression(filter: -> true), (req, res) =>
-            if not @options.outputs?.export?.enabled or not req.stream.archiver or not req.query.from or not req.query.to
+            if not @options.outputs?.export?.enabled or not req.stream.archiver
                 return res.status(404).json status: 404, error: "Stream not archived"
+            else if not req.query.from or not req.query.to
+                return res.status(400).json status: 400, error: "Missing parameters"
             req.stream.archiver.getExport req.query, (error, exp) =>
                 if error
-                    res.status(500).json status: 500, error: error
+                    res.status(500).json status: 500, error: error?.stack or error
                 else if not exp or not exp.length
                     res.status(404).json status: 404, error: "Export not found"
                 else
@@ -148,6 +150,47 @@ class Server
                     res.set "Content-Disposition", "attachment; filename=\"#{exp.filename}\""
                     res.set "X-Archiver-Filename", exp.filename
                     exp.pipe(res).end()
+
+        @app.post "/:stream/export", (req, res) =>
+            if not @options.outputs?.export?.enabled or not req.stream.archiver
+                return res.status(404).json status: 404, error: "Stream not archived"
+            else if not req.query.from or not req.query.to
+                return res.status(400).json status: 400, error: "Missing parameters"
+            req.stream.archiver.saveExport req.query, (error, exp) =>
+                if error
+                    res.status(500).json status: 500, error: error?.stack or error
+                else if not exp or not exp.length
+                    res.status(404).json status: 404, error: "Export not found"
+                else
+                    res.send filename: exp.filename
+
+        @app.get "/:stream/export/:id", (req, res) =>
+            if not @options.outputs?.export?.enabled or not req.stream.archiver
+                return res.status(404).json status: 404, error: "Stream not archived"
+            req.stream.archiver.getExportById req.params.id, (error, exp) =>
+                if error
+                    res.status(500).json status: 500, error: error?.stack or error
+                else
+                    res.type req.stream.opts.format
+                    res.send exp
+
+        @app.delete "/:stream/export/:id", (req, res) =>
+            if not @options.outputs?.export?.enabled or not req.stream.archiver
+                return res.status(404).json status: 404, error: "Stream not archived"
+            req.stream.archiver.deleteExport req.params.id, (error) =>
+                if error
+                    res.status(500).json status: 500, error: error?.stack or error
+                else
+                    res.send message: "ok"
+
+        @app.get "/:stream/exports", (req, res) =>
+            if not @options.outputs?.export?.enabled or not req.stream.archiver
+                return res.status(404).json status: 404, error: "Stream not archived"
+            req.stream.archiver.getExports _.extend(req.query, allowUnlimited: true), (error, exports) =>
+                if error
+                    res.status(500).json status: 500, error: error?.stack or error
+                else
+                    res.send exports
 
         @_server = @app.listen @options.port,() =>
             debug "Listing on port #{@options.port}"

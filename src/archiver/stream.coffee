@@ -1,4 +1,5 @@
 _ = require "underscore"
+moment = require "moment"
 IdTransformer = require "./transformers/id"
 AudioTransformer = require "./transformers/audio"
 WaveformTransformer = require "./transformers/waveform"
@@ -77,63 +78,63 @@ class StreamArchiver extends require("events").EventEmitter
 
     #----------
 
-    getSegments: (options, cb) ->
+    getSegments: (options, callback) ->
         @getSegmentsFromMemory options, (error, segments) =>
-            return cb error, segments if error or (segments and segments.length)
+            return callback error, segments if error or (segments and segments.length)
             @getSegmentsFromElasticsearch options, null, (error, segments) =>
-                return cb error, segments if error or (segments and segments.length)
-                return cb null, []
+                return callback error, segments if error or (segments and segments.length)
+                return callback null, []
 
     #----------
 
-    getSegmentsFromMemory: (options, cb) ->
-        return cb() if not @stores.memory
-        cb null, @stores.memory.getSegments(options)
+    getSegmentsFromMemory: (options, callback) ->
+        return callback() if not @stores.memory
+        callback null, @stores.memory.getSegments(options)
 
     #----------
 
-    getSegmentsFromElasticsearch: (options, attribute, cb) ->
-        return cb() if not @stores.elasticsearch
+    getSegmentsFromElasticsearch: (options, attribute, callback) ->
+        return callback() if not @stores.elasticsearch
         @stores.elasticsearch.getSegments(options, attribute)
-        .then((segments) -> return cb null, segments)
-        .catch(() -> cb())
+        .then((segments) -> return callback null, segments)
+        .catch(() -> callback())
 
     #----------
 
-    getSegment: (id, cb) ->
+    getSegment: (id, callback) ->
         @getSegmentFromMemory id, (error, segment) =>
-            return cb error, (_.pick(segment, segmentKeys.concat(["waveform"])) if segment) if error or segment
+            return callback error, (_.pick(segment, segmentKeys.concat(["waveform"])) if segment) if error or segment
             @getSegmentFromElasticsearch id, (error, segment) =>
-                return cb error, (_.pick(segment, segmentKeys.concat(["waveform"])) if segment)
+                return callback error, (_.pick(segment, segmentKeys.concat(["waveform"])) if segment)
 
     #----------
 
-    getSegmentFromMemory: (id, cb) ->
-        return cb() if not @stores.memory
-        cb null, @stores.memory.getSegment(id)
+    getSegmentFromMemory: (id, callback) ->
+        return callback() if not @stores.memory
+        callback null, @stores.memory.getSegment(id)
 
     #----------
 
-    getSegmentFromElasticsearch: (id, cb) ->
-        return cb() if not @stores.elasticsearch
+    getSegmentFromElasticsearch: (id, callback) ->
+        return callback() if not @stores.elasticsearch
         @stores.elasticsearch.getSegment(id)
-        .then((segment) -> return cb null, segment)
-        .catch(() -> cb())
+        .then((segment) -> return callback null, segment)
+        .catch(() -> callback())
 
     #----------
 
-    getPreview: (options, cb) ->
+    getPreview: (options, callback) ->
         @getSegments options, (error, segments) =>
-            return cb error, segments if error or not segments or not segments.length
+            return callback error, segments if error or not segments or not segments.length
             @generatePreview segments, (error, preview) =>
-                return cb error, preview if error or (preview and preview.length)
-                return cb null, []
+                return callback error, preview if error or (preview and preview.length)
+                return callback null, []
 
     #----------
 
-    generatePreview: (segments, cb) ->
+    generatePreview: (segments, callback) ->
         preview = []
-        return cb(null, preview) if not segments.length
+        return callback(null, preview) if not segments.length
         wavedataTransformer = new WavedataTransformer @stream
         previewTransformer = new PreviewTransformer @stream, @options.preview_width,segments.length
         wavedataTransformer.pipe previewTransformer
@@ -141,167 +142,239 @@ class StreamArchiver extends require("events").EventEmitter
             while segment = previewTransformer.read()
                 preview.push _.pick(segment, segmentKeys)
         previewTransformer.on "end", =>
-            cb null, preview
+            callback null, preview
         _.each segments, (segment) =>
             wavedataTransformer.write segment
         previewTransformer.end()
 
     #----------
 
-    getWaveform: (id, cb) ->
+    getWaveform: (id, callback) ->
         @getWaveformFromMemory id, (error, waveform) =>
-            return cb error, waveform if error or waveform
-            @getWaveformFromElasticsearch id, cb
+            return callback error, waveform if error or waveform
+            @getWaveformFromElasticsearch id, callback
 
     #----------
 
-    getWaveformFromMemory: (id, cb) ->
-        return cb() if not @stores.memory
-        cb null, @stores.memory.getWaveform(id)
+    getWaveformFromMemory: (id, callback) ->
+        return callback() if not @stores.memory
+        callback null, @stores.memory.getWaveform(id)
 
     #----------
 
-    getWaveformFromElasticsearch: (id, cb) ->
-        return cb() if not @stores.elasticsearch
+    getWaveformFromElasticsearch: (id, callback) ->
+        return callback() if not @stores.elasticsearch
         @stores.elasticsearch.getSegment(id) \
-            .then((segment) -> return cb null, segment?.waveform) \
-            .catch(() -> cb())
+            .then((segment) -> return callback null, segment?.waveform) \
+            .catch(() -> callback())
 
     #----------
 
-    getAudio: (id, format, cb) ->
+    getAudio: (id, format, callback) ->
         @getAudioFromMemory id, format, (error, audio) =>
-            return cb error, audio if error or audio
-            @getAudioFromS3 id, format, cb
+            return callback error, audio if error or audio
+            @getAudioFromS3 id, format, callback
 
     #----------
 
-    getAudioFromMemory: (id, format, cb) ->
-        return cb() if not @stores.memory
-        cb null, @stores.memory.getAudio(id)
+    getAudioFromMemory: (id, format, callback) ->
+        return callback() if not @stores.memory
+        callback null, @stores.memory.getAudio(id)
 
     #----------
 
-    getAudioFromS3: (id, format, cb) ->
-        return cb() if not @stores.s3
+    getAudioFromS3: (id, format, callback) ->
+        return callback() if not @stores.s3
         @stores.s3.getAudioById(id, format) \
-            .then((audio) -> return cb null, audio) \
-            .catch(() -> cb())
+            .then((audio) -> return callback null, audio) \
+            .catch(() -> callback())
 
     #----------
 
-    getAudios: (options, cb) ->
+    getAudios: (options, callback) ->
         @getAudiosFromMemory options, (error, audios) =>
-            return cb error, audios if error or (audios and audios.length)
+            return callback error, audios if error or (audios and audios.length)
             @getAudiosFromS3 options, (error, audios) =>
-                return cb error, audios if error or (audios and audios.length)
-                return cb null, []
+                return callback error, audios if error or (audios and audios.length)
+                return callback null, []
 
     #----------
 
-    getAudiosFromMemory: (options, cb) ->
-        return cb() if not @stores.memory
-        cb null, @stores.memory.getAudios(options)
+    getAudiosFromMemory: (options, callback) ->
+        return callback() if not @stores.memory
+        callback null, @stores.memory.getAudios(options)
 
     #----------
 
-    getAudiosFromS3: (options, cb) ->
-        return cb() if not @stores.s3
+    getAudiosFromS3: (options, callback) ->
+        return callback() if not @stores.s3
         @getSegmentsFromElasticsearch options, "id", (error, segments) =>
-            return cb error, [] if error or not segments or not segments.length
+            return callback error, [] if error or not segments or not segments.length
             @stores.s3.getAudiosByIds(segments)
-                .then((audios) -> return cb null, audios)
-                .catch((error) -> cb(error))
+                .then((audios) -> return callback null, audios)
+                .catch((error) -> callback(error))
 
     #----------
 
-    getComment: (id, cb) ->
+    getComment: (id, callback) ->
         @getCommentFromMemory id, (error, comment) =>
-            return cb error, comment if error or comment
-        @getCommentFromElasticsearch id, cb
+            return callback error, comment if error or comment
+        @getCommentFromElasticsearch id, callback
 
     #----------
 
-    getCommentFromMemory: (id, cb) ->
-        return cb() if not @stores.memory
-        cb null, @stores.memory.getComment(id)
+    getCommentFromMemory: (id, callback) ->
+        return callback() if not @stores.memory
+        callback null, @stores.memory.getComment(id)
 
     #----------
 
-    getCommentFromElasticsearch: (id, cb) ->
-        return cb() if not @stores.elasticsearch
+    getCommentFromElasticsearch: (id, callback) ->
+        return callback() if not @stores.elasticsearch
         @stores.elasticsearch.getSegment(id) \
-        .then((segment) -> return cb null, segment?.comment) \
-        .catch(() -> cb())
+        .then((segment) -> return callback null, segment?.comment) \
+        .catch(() -> callback())
 
     #----------
 
-    getComments: (options, cb) ->
+    getComments: (options, callback) ->
         @getCommentsFromElasticsearch options, (error, comments) =>
-            return cb error, comments if error or (comments and comments.length)
-            return cb null, []
+            return callback error, comments if error or (comments and comments.length)
+            return callback null, []
 
     #----------
 
-    getCommentsFromElasticsearch: (options, cb) ->
-        return cb() if not @stores.elasticsearch
+    getCommentsFromElasticsearch: (options, callback) ->
+        return callback() if not @stores.elasticsearch
         @stores.elasticsearch.getComments(options) \
-        .then((comments) => cb null, comments)
-        .catch cb
+        .then((comments) => callback null, comments)
+        .catch callback
 
     #----------
 
-    saveComment: (comment, cb) ->
+    saveComment: (comment, callback) ->
         @saveCommentToMemory comment, (error, comment) =>
-            return cb error, comment if error
-            @saveCommentToElasticsearch comment, cb
+            return callback error, comment if error
+            @saveCommentToElasticsearch comment, callback
 
     #----------
 
-    saveCommentToMemory: (comment, cb) ->
-        return cb null, comment if not @stores.memory
+    saveCommentToMemory: (comment, callback) ->
+        return callback null, comment if not @stores.memory
         @stores.memory.storeComment comment
-        cb null, comment
+        callback null, comment
 
     #----------
 
-    saveCommentToElasticsearch: (comment, cb) ->
-        return cb null, comment if not @stores.elasticsearch
+    saveCommentToElasticsearch: (comment, callback) ->
+        return callback null, comment if not @stores.elasticsearch
         @stores.elasticsearch.indexComment(comment) \
-        .then(() => cb null, comment)
-        .catch cb
+        .then(() => callback null, comment)
+        .catch callback
 
     #----------
 
-    getHls: (options, cb) ->
+    getHls: (options, callback) ->
         @getSegments options, (error, segments) =>
-            return cb error, segments if error or not segments or not segments.length
-            @generateHls segments, cb
+            return callback error, segments if error or not segments or not segments.length
+            @generateHls segments, callback
 
     #----------
 
-    generateHls: (segments, cb) ->
+    generateHls: (segments, callback) ->
         hls = new HlsOutput @stream
         try
-            cb null, hls.append(segments).end()
+            callback null, hls.append(segments).end()
         catch error
-            cb error
+            callback error
 
     #----------
 
-    getExport: (options, cb) ->
+    getExport: (options, callback) ->
         @getAudios options, (error, audios) =>
-            return cb error, audios if error or not audios or not audios.length
-            @generateExport audios, cb
+            return callback error, audios if error or not audios or not audios.length
+            @generateExport audios, options, callback
 
     #----------
 
-    generateExport: (audios, cb) ->
-        exp = new ExportOutput @stream
-        try
-            cb null, exp.append(audios)
-        catch error
-            cb error
+    generateExport: (audios, options, callback) ->
+        callback null, (new ExportOutput @stream, options).append(audios)
+
+    #----------
+
+    saveExport: (options, callback) ->
+        @getExport options, (error, exp) =>
+            return callback error, exp if error or not exp or not exp.length
+            @saveExportToS3 exp, (error, exp) =>
+                return callback error, exp if error
+                @saveExportToElasticsearch exp, callback
+
+    #----------
+
+    saveExportToS3: (exp, callback) ->
+        return callback() if not @stores.s3
+        @stores.s3.putExport(exp)
+            .then(() => callback null, exp)
+            .catch callback
+
+    #----------
+
+    saveExportToElasticsearch: (exp, callback) ->
+        return callback null, exp if not @stores.elasticsearch
+        @stores.elasticsearch.indexExport(exp)
+            .then(() => callback null, exp)
+            .catch callback
+
+    #----------
+
+    getExportById: (id, callback) ->
+        @getExportByIdFromS3 id, callback
+
+    #----------
+
+    getExportByIdFromS3: (id, callback) ->
+        return callback() if not @stores.s3
+        @stores.s3.getExportById(id)
+            .then((exp) => callback null, exp)
+            .catch callback
+
+    #----------
+
+    deleteExport: (id, callback) ->
+        @deleteExportFromElasticsearch id, (error) =>
+            return callback error if error
+            @deleteExportFromS3 id, callback
+
+    #----------
+
+    deleteExportFromElasticsearch: (id, callback) ->
+        return callback() if not @stores.elasticsearch
+        @stores.elasticsearch.deleteExport(id)
+            .then(() => callback())
+            .catch callback
+
+    #----------
+
+    deleteExportFromS3: (id, callback) ->
+        return callback() if not @stores.s3
+        @stores.s3.deleteExport(id)
+            .then(() => callback())
+            .catch callback
+
+    #----------
+
+    getExports: (options, callback) ->
+        @getExportsFromElasticsearch options, (error, exports) =>
+            return callback error, exports if error or (exports and exports.length)
+            return callback null, []
+
+    #----------
+
+    getExportsFromElasticsearch: (options, callback) ->
+        return callback() if not @stores.elasticsearch
+        @stores.elasticsearch.getExports(options) \
+            .then((exports) => callback null, exports)
+            .catch callback
 
     #----------
 

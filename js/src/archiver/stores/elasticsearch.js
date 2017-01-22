@@ -1,4 +1,4 @@
-var ElasticsearchStore, P, R_TIMESTAMP, _, debug, elasticsearch, moment, segmentKeys;
+var ElasticsearchStore, P, R_TIMESTAMP, _, debug, elasticsearch, exportKeys, moment, segmentKeys;
 
 P = require("bluebird");
 
@@ -13,6 +13,8 @@ debug = require("debug")("sm:archiver:stores:elasticsearch");
 R_TIMESTAMP = /^[1-9][0-9]*$/;
 
 segmentKeys = ["id", "ts", "end_ts", "ts_actual", "end_ts_actual", "data_length", "duration", "discontinuitySeq", "pts", "waveform", "comment"];
+
+exportKeys = ["id", "format", "filename", "to", "from"];
 
 ElasticsearchStore = (function() {
   function ElasticsearchStore(stream, options) {
@@ -31,6 +33,14 @@ ElasticsearchStore = (function() {
     return this.updateOne("segment", comment.id, {
       comment: comment
     });
+  };
+
+  ElasticsearchStore.prototype.indexExport = function(exp) {
+    return this.indexOne("export", exp.id, _.pick(exp, exportKeys));
+  };
+
+  ElasticsearchStore.prototype.deleteExport = function(id) {
+    return this.deleteOne("export", id);
   };
 
   ElasticsearchStore.prototype.indexOne = function(type, id, body) {
@@ -85,6 +95,19 @@ ElasticsearchStore = (function() {
     })(this));
   };
 
+  ElasticsearchStore.prototype.deleteOne = function(type, id) {
+    debug("Deleting " + type + " " + id + " from " + this.stream.key);
+    return this["delete"]({
+      index: this.stream.key,
+      type: type,
+      id: id
+    })["catch"]((function(_this) {
+      return function(error) {
+        return debug("DELETE " + type + " Error for " + _this.stream.key + "/" + id + ": " + error);
+      };
+    })(this));
+  };
+
   ElasticsearchStore.prototype.getSegments = function(options, attribute) {
     return this.getMany("segment", options, attribute);
   };
@@ -93,32 +116,45 @@ ElasticsearchStore = (function() {
     return this.getMany("segment", options, "comment");
   };
 
+  ElasticsearchStore.prototype.getExports = function(options) {
+    return this.getMany("export", options);
+  };
+
   ElasticsearchStore.prototype.getMany = function(type, options, attribute) {
-    var first, from, last, to;
+    var first, from, last, query, to;
     first = moment().subtract(this.hours, 'hours').valueOf();
     last = moment().valueOf();
     from = this.parseId(options.from, first);
     to = this.parseId(options.to, last);
     debug("Searching " + (attribute || type) + " " + from + " -> " + to + " from " + this.stream.key);
+    query = {
+      range: {
+        id: {
+          gte: from,
+          lt: to
+        }
+      }
+    };
+    if (options.allowUnlimited && !options.from && !options.to) {
+      query = void 0;
+    } else if (options.from || options.to) {
+      query.range.id.gte = options.from;
+      query.range.id.lt = options.to || last;
+    }
+    debug(query);
     return this.search({
       index: this.stream.key,
       type: type,
       body: {
         size: this.options.size,
         sort: "id",
-        query: {
-          range: {
-            id: {
-              gte: from,
-              lt: to
-            }
-          }
-        }
+        query: query
       }
     }).then((function(_this) {
       return function(result) {
         return P.map(result.hits.hits, function(hit) {
           var ref;
+          debug(hit);
           if (attribute) {
             return (ref = hit._source) != null ? ref[attribute] : void 0;
           } else {

@@ -1,8 +1,10 @@
-var AudioTransformer, ElasticsearchStore, ElasticsearchStoreTransformer, ExportOutput, HlsOutput, IdTransformer, MemoryStore, MemoryStoreTransformer, PreviewTransformer, QueueMemoryStoreTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, segmentKeys,
+var AudioTransformer, ElasticsearchStore, ElasticsearchStoreTransformer, ExportOutput, HlsOutput, IdTransformer, MemoryStore, MemoryStoreTransformer, PreviewTransformer, QueueMemoryStoreTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, moment, segmentKeys,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
 _ = require("underscore");
+
+moment = require("moment");
 
 IdTransformer = require("./transformers/id");
 
@@ -107,92 +109,92 @@ StreamArchiver = (function(superClass) {
     debug("Created for " + this.stream.key);
   }
 
-  StreamArchiver.prototype.getSegments = function(options, cb) {
+  StreamArchiver.prototype.getSegments = function(options, callback) {
     return this.getSegmentsFromMemory(options, (function(_this) {
       return function(error, segments) {
         if (error || (segments && segments.length)) {
-          return cb(error, segments);
+          return callback(error, segments);
         }
         return _this.getSegmentsFromElasticsearch(options, null, function(error, segments) {
           if (error || (segments && segments.length)) {
-            return cb(error, segments);
+            return callback(error, segments);
           }
-          return cb(null, []);
+          return callback(null, []);
         });
       };
     })(this));
   };
 
-  StreamArchiver.prototype.getSegmentsFromMemory = function(options, cb) {
+  StreamArchiver.prototype.getSegmentsFromMemory = function(options, callback) {
     if (!this.stores.memory) {
-      return cb();
+      return callback();
     }
-    return cb(null, this.stores.memory.getSegments(options));
+    return callback(null, this.stores.memory.getSegments(options));
   };
 
-  StreamArchiver.prototype.getSegmentsFromElasticsearch = function(options, attribute, cb) {
+  StreamArchiver.prototype.getSegmentsFromElasticsearch = function(options, attribute, callback) {
     if (!this.stores.elasticsearch) {
-      return cb();
+      return callback();
     }
     return this.stores.elasticsearch.getSegments(options, attribute).then(function(segments) {
-      return cb(null, segments);
+      return callback(null, segments);
     })["catch"](function() {
-      return cb();
+      return callback();
     });
   };
 
-  StreamArchiver.prototype.getSegment = function(id, cb) {
+  StreamArchiver.prototype.getSegment = function(id, callback) {
     return this.getSegmentFromMemory(id, (function(_this) {
       return function(error, segment) {
         if (error || segment) {
-          return cb(error, (segment ? _.pick(segment, segmentKeys.concat(["waveform"])) : void 0));
+          return callback(error, (segment ? _.pick(segment, segmentKeys.concat(["waveform"])) : void 0));
         }
         return _this.getSegmentFromElasticsearch(id, function(error, segment) {
-          return cb(error, (segment ? _.pick(segment, segmentKeys.concat(["waveform"])) : void 0));
+          return callback(error, (segment ? _.pick(segment, segmentKeys.concat(["waveform"])) : void 0));
         });
       };
     })(this));
   };
 
-  StreamArchiver.prototype.getSegmentFromMemory = function(id, cb) {
+  StreamArchiver.prototype.getSegmentFromMemory = function(id, callback) {
     if (!this.stores.memory) {
-      return cb();
+      return callback();
     }
-    return cb(null, this.stores.memory.getSegment(id));
+    return callback(null, this.stores.memory.getSegment(id));
   };
 
-  StreamArchiver.prototype.getSegmentFromElasticsearch = function(id, cb) {
+  StreamArchiver.prototype.getSegmentFromElasticsearch = function(id, callback) {
     if (!this.stores.elasticsearch) {
-      return cb();
+      return callback();
     }
     return this.stores.elasticsearch.getSegment(id).then(function(segment) {
-      return cb(null, segment);
+      return callback(null, segment);
     })["catch"](function() {
-      return cb();
+      return callback();
     });
   };
 
-  StreamArchiver.prototype.getPreview = function(options, cb) {
+  StreamArchiver.prototype.getPreview = function(options, callback) {
     return this.getSegments(options, (function(_this) {
       return function(error, segments) {
         if (error || !segments || !segments.length) {
-          return cb(error, segments);
+          return callback(error, segments);
         }
         return _this.generatePreview(segments, function(error, preview) {
           if (error || (preview && preview.length)) {
-            return cb(error, preview);
+            return callback(error, preview);
           }
-          return cb(null, []);
+          return callback(null, []);
         });
       };
     })(this));
   };
 
-  StreamArchiver.prototype.generatePreview = function(segments, cb) {
+  StreamArchiver.prototype.generatePreview = function(segments, callback) {
     var preview, previewTransformer, wavedataTransformer;
     preview = [];
     if (!segments.length) {
-      return cb(null, preview);
+      return callback(null, preview);
     }
     wavedataTransformer = new WavedataTransformer(this.stream);
     previewTransformer = new PreviewTransformer(this.stream, this.options.preview_width, segments.length);
@@ -209,7 +211,7 @@ StreamArchiver = (function(superClass) {
     })(this));
     previewTransformer.on("end", (function(_this) {
       return function() {
-        return cb(null, preview);
+        return callback(null, preview);
       };
     })(this));
     _.each(segments, (function(_this) {
@@ -220,228 +222,329 @@ StreamArchiver = (function(superClass) {
     return previewTransformer.end();
   };
 
-  StreamArchiver.prototype.getWaveform = function(id, cb) {
+  StreamArchiver.prototype.getWaveform = function(id, callback) {
     return this.getWaveformFromMemory(id, (function(_this) {
       return function(error, waveform) {
         if (error || waveform) {
-          return cb(error, waveform);
+          return callback(error, waveform);
         }
-        return _this.getWaveformFromElasticsearch(id, cb);
+        return _this.getWaveformFromElasticsearch(id, callback);
       };
     })(this));
   };
 
-  StreamArchiver.prototype.getWaveformFromMemory = function(id, cb) {
+  StreamArchiver.prototype.getWaveformFromMemory = function(id, callback) {
     if (!this.stores.memory) {
-      return cb();
+      return callback();
     }
-    return cb(null, this.stores.memory.getWaveform(id));
+    return callback(null, this.stores.memory.getWaveform(id));
   };
 
-  StreamArchiver.prototype.getWaveformFromElasticsearch = function(id, cb) {
+  StreamArchiver.prototype.getWaveformFromElasticsearch = function(id, callback) {
     if (!this.stores.elasticsearch) {
-      return cb();
+      return callback();
     }
     return this.stores.elasticsearch.getSegment(id).then(function(segment) {
-      return cb(null, segment != null ? segment.waveform : void 0);
+      return callback(null, segment != null ? segment.waveform : void 0);
     })["catch"](function() {
-      return cb();
+      return callback();
     });
   };
 
-  StreamArchiver.prototype.getAudio = function(id, format, cb) {
+  StreamArchiver.prototype.getAudio = function(id, format, callback) {
     return this.getAudioFromMemory(id, format, (function(_this) {
       return function(error, audio) {
         if (error || audio) {
-          return cb(error, audio);
+          return callback(error, audio);
         }
-        return _this.getAudioFromS3(id, format, cb);
+        return _this.getAudioFromS3(id, format, callback);
       };
     })(this));
   };
 
-  StreamArchiver.prototype.getAudioFromMemory = function(id, format, cb) {
+  StreamArchiver.prototype.getAudioFromMemory = function(id, format, callback) {
     if (!this.stores.memory) {
-      return cb();
+      return callback();
     }
-    return cb(null, this.stores.memory.getAudio(id));
+    return callback(null, this.stores.memory.getAudio(id));
   };
 
-  StreamArchiver.prototype.getAudioFromS3 = function(id, format, cb) {
+  StreamArchiver.prototype.getAudioFromS3 = function(id, format, callback) {
     if (!this.stores.s3) {
-      return cb();
+      return callback();
     }
     return this.stores.s3.getAudioById(id, format).then(function(audio) {
-      return cb(null, audio);
+      return callback(null, audio);
     })["catch"](function() {
-      return cb();
+      return callback();
     });
   };
 
-  StreamArchiver.prototype.getAudios = function(options, cb) {
+  StreamArchiver.prototype.getAudios = function(options, callback) {
     return this.getAudiosFromMemory(options, (function(_this) {
       return function(error, audios) {
         if (error || (audios && audios.length)) {
-          return cb(error, audios);
+          return callback(error, audios);
         }
         return _this.getAudiosFromS3(options, function(error, audios) {
           if (error || (audios && audios.length)) {
-            return cb(error, audios);
+            return callback(error, audios);
           }
-          return cb(null, []);
+          return callback(null, []);
         });
       };
     })(this));
   };
 
-  StreamArchiver.prototype.getAudiosFromMemory = function(options, cb) {
+  StreamArchiver.prototype.getAudiosFromMemory = function(options, callback) {
     if (!this.stores.memory) {
-      return cb();
+      return callback();
     }
-    return cb(null, this.stores.memory.getAudios(options));
+    return callback(null, this.stores.memory.getAudios(options));
   };
 
-  StreamArchiver.prototype.getAudiosFromS3 = function(options, cb) {
+  StreamArchiver.prototype.getAudiosFromS3 = function(options, callback) {
     if (!this.stores.s3) {
-      return cb();
+      return callback();
     }
     return this.getSegmentsFromElasticsearch(options, "id", (function(_this) {
       return function(error, segments) {
         if (error || !segments || !segments.length) {
-          return cb(error, []);
+          return callback(error, []);
         }
         return _this.stores.s3.getAudiosByIds(segments).then(function(audios) {
-          return cb(null, audios);
+          return callback(null, audios);
         })["catch"](function(error) {
-          return cb(error);
+          return callback(error);
         });
       };
     })(this));
   };
 
-  StreamArchiver.prototype.getComment = function(id, cb) {
+  StreamArchiver.prototype.getComment = function(id, callback) {
     this.getCommentFromMemory(id, (function(_this) {
       return function(error, comment) {
         if (error || comment) {
-          return cb(error, comment);
+          return callback(error, comment);
         }
       };
     })(this));
-    return this.getCommentFromElasticsearch(id, cb);
+    return this.getCommentFromElasticsearch(id, callback);
   };
 
-  StreamArchiver.prototype.getCommentFromMemory = function(id, cb) {
+  StreamArchiver.prototype.getCommentFromMemory = function(id, callback) {
     if (!this.stores.memory) {
-      return cb();
+      return callback();
     }
-    return cb(null, this.stores.memory.getComment(id));
+    return callback(null, this.stores.memory.getComment(id));
   };
 
-  StreamArchiver.prototype.getCommentFromElasticsearch = function(id, cb) {
+  StreamArchiver.prototype.getCommentFromElasticsearch = function(id, callback) {
     if (!this.stores.elasticsearch) {
-      return cb();
+      return callback();
     }
     return this.stores.elasticsearch.getSegment(id).then(function(segment) {
-      return cb(null, segment != null ? segment.comment : void 0);
+      return callback(null, segment != null ? segment.comment : void 0);
     })["catch"](function() {
-      return cb();
+      return callback();
     });
   };
 
-  StreamArchiver.prototype.getComments = function(options, cb) {
+  StreamArchiver.prototype.getComments = function(options, callback) {
     return this.getCommentsFromElasticsearch(options, (function(_this) {
       return function(error, comments) {
         if (error || (comments && comments.length)) {
-          return cb(error, comments);
+          return callback(error, comments);
         }
-        return cb(null, []);
+        return callback(null, []);
       };
     })(this));
   };
 
-  StreamArchiver.prototype.getCommentsFromElasticsearch = function(options, cb) {
+  StreamArchiver.prototype.getCommentsFromElasticsearch = function(options, callback) {
     if (!this.stores.elasticsearch) {
-      return cb();
+      return callback();
     }
     return this.stores.elasticsearch.getComments(options).then((function(_this) {
       return function(comments) {
-        return cb(null, comments);
+        return callback(null, comments);
       };
-    })(this))["catch"](cb);
+    })(this))["catch"](callback);
   };
 
-  StreamArchiver.prototype.saveComment = function(comment, cb) {
+  StreamArchiver.prototype.saveComment = function(comment, callback) {
     return this.saveCommentToMemory(comment, (function(_this) {
       return function(error, comment) {
         if (error) {
-          return cb(error, comment);
+          return callback(error, comment);
         }
-        return _this.saveCommentToElasticsearch(comment, cb);
+        return _this.saveCommentToElasticsearch(comment, callback);
       };
     })(this));
   };
 
-  StreamArchiver.prototype.saveCommentToMemory = function(comment, cb) {
+  StreamArchiver.prototype.saveCommentToMemory = function(comment, callback) {
     if (!this.stores.memory) {
-      return cb(null, comment);
+      return callback(null, comment);
     }
     this.stores.memory.storeComment(comment);
-    return cb(null, comment);
+    return callback(null, comment);
   };
 
-  StreamArchiver.prototype.saveCommentToElasticsearch = function(comment, cb) {
+  StreamArchiver.prototype.saveCommentToElasticsearch = function(comment, callback) {
     if (!this.stores.elasticsearch) {
-      return cb(null, comment);
+      return callback(null, comment);
     }
     return this.stores.elasticsearch.indexComment(comment).then((function(_this) {
       return function() {
-        return cb(null, comment);
+        return callback(null, comment);
       };
-    })(this))["catch"](cb);
+    })(this))["catch"](callback);
   };
 
-  StreamArchiver.prototype.getHls = function(options, cb) {
+  StreamArchiver.prototype.getHls = function(options, callback) {
     return this.getSegments(options, (function(_this) {
       return function(error, segments) {
         if (error || !segments || !segments.length) {
-          return cb(error, segments);
+          return callback(error, segments);
         }
-        return _this.generateHls(segments, cb);
+        return _this.generateHls(segments, callback);
       };
     })(this));
   };
 
-  StreamArchiver.prototype.generateHls = function(segments, cb) {
+  StreamArchiver.prototype.generateHls = function(segments, callback) {
     var error, error1, hls;
     hls = new HlsOutput(this.stream);
     try {
-      return cb(null, hls.append(segments).end());
+      return callback(null, hls.append(segments).end());
     } catch (error1) {
       error = error1;
-      return cb(error);
+      return callback(error);
     }
   };
 
-  StreamArchiver.prototype.getExport = function(options, cb) {
+  StreamArchiver.prototype.getExport = function(options, callback) {
     return this.getAudios(options, (function(_this) {
       return function(error, audios) {
         if (error || !audios || !audios.length) {
-          return cb(error, audios);
+          return callback(error, audios);
         }
-        return _this.generateExport(audios, cb);
+        return _this.generateExport(audios, options, callback);
       };
     })(this));
   };
 
-  StreamArchiver.prototype.generateExport = function(audios, cb) {
-    var error, error1, exp;
-    exp = new ExportOutput(this.stream);
-    try {
-      return cb(null, exp.append(audios));
-    } catch (error1) {
-      error = error1;
-      return cb(error);
+  StreamArchiver.prototype.generateExport = function(audios, options, callback) {
+    return callback(null, (new ExportOutput(this.stream, options)).append(audios));
+  };
+
+  StreamArchiver.prototype.saveExport = function(options, callback) {
+    return this.getExport(options, (function(_this) {
+      return function(error, exp) {
+        if (error || !exp || !exp.length) {
+          return callback(error, exp);
+        }
+        return _this.saveExportToS3(exp, function(error, exp) {
+          if (error) {
+            return callback(error, exp);
+          }
+          return _this.saveExportToElasticsearch(exp, callback);
+        });
+      };
+    })(this));
+  };
+
+  StreamArchiver.prototype.saveExportToS3 = function(exp, callback) {
+    if (!this.stores.s3) {
+      return callback();
     }
+    return this.stores.s3.putExport(exp).then((function(_this) {
+      return function() {
+        return callback(null, exp);
+      };
+    })(this))["catch"](callback);
+  };
+
+  StreamArchiver.prototype.saveExportToElasticsearch = function(exp, callback) {
+    if (!this.stores.elasticsearch) {
+      return callback(null, exp);
+    }
+    return this.stores.elasticsearch.indexExport(exp).then((function(_this) {
+      return function() {
+        return callback(null, exp);
+      };
+    })(this))["catch"](callback);
+  };
+
+  StreamArchiver.prototype.getExportById = function(id, callback) {
+    return this.getExportByIdFromS3(id, callback);
+  };
+
+  StreamArchiver.prototype.getExportByIdFromS3 = function(id, callback) {
+    if (!this.stores.s3) {
+      return callback();
+    }
+    return this.stores.s3.getExportById(id).then((function(_this) {
+      return function(exp) {
+        return callback(null, exp);
+      };
+    })(this))["catch"](callback);
+  };
+
+  StreamArchiver.prototype.deleteExport = function(id, callback) {
+    return this.deleteExportFromElasticsearch(id, (function(_this) {
+      return function(error) {
+        if (error) {
+          return callback(error);
+        }
+        return _this.deleteExportFromS3(id, callback);
+      };
+    })(this));
+  };
+
+  StreamArchiver.prototype.deleteExportFromElasticsearch = function(id, callback) {
+    if (!this.stores.elasticsearch) {
+      return callback();
+    }
+    return this.stores.elasticsearch.deleteExport(id).then((function(_this) {
+      return function() {
+        return callback();
+      };
+    })(this))["catch"](callback);
+  };
+
+  StreamArchiver.prototype.deleteExportFromS3 = function(id, callback) {
+    if (!this.stores.s3) {
+      return callback();
+    }
+    return this.stores.s3.deleteExport(id).then((function(_this) {
+      return function() {
+        return callback();
+      };
+    })(this))["catch"](callback);
+  };
+
+  StreamArchiver.prototype.getExports = function(options, callback) {
+    return this.getExportsFromElasticsearch(options, (function(_this) {
+      return function(error, exports) {
+        if (error || (exports && exports.length)) {
+          return callback(error, exports);
+        }
+        return callback(null, []);
+      };
+    })(this));
+  };
+
+  StreamArchiver.prototype.getExportsFromElasticsearch = function(options, callback) {
+    if (!this.stores.elasticsearch) {
+      return callback();
+    }
+    return this.stores.elasticsearch.getExports(options).then((function(_this) {
+      return function(exports) {
+        return callback(null, exports);
+      };
+    })(this))["catch"](callback);
   };
 
   return StreamArchiver;

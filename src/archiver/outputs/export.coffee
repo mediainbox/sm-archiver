@@ -4,14 +4,17 @@ PassThrough = require("stream").PassThrough
 debug = require("debug") "sm:archiver:outputs:export"
 
 class ExportOutput
-    constructor: (@stream) ->
+    constructor: (@stream, options) ->
+        @id = moment().valueOf()
         @passThrough = new PassThrough objectMode: true
         @audios = []
         @length = 0
         @max = 360
         @size = 0
-        @filename = "#{@stream.key}-#{moment().valueOf()}.#{@stream.opts.format}"
+        @format = @stream.opts.format
+        @filename = "#{@stream.key}-#{@id}.#{@format}"
         @passThrough.on "end", @onEnd
+        _.extend @, options
         debug "Created for #{@stream.key}"
 
     #----------
@@ -48,6 +51,11 @@ class ExportOutput
         @ended = true
         debug "Ended for #{@stream.key}"
         @
+
+    #----------
+
+    concat: () ->
+        Buffer.concat this.audios
 
     #----------
 
