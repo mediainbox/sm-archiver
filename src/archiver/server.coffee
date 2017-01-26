@@ -12,6 +12,9 @@ exportKeys = [
     "to",
     "from"
 ]
+CACHE_HEADER = "Cache-Control"
+CACHE = "max-age=3600, smax-age=86400"
+NO_CACHE = "max-age=0, no-cache, must-revalidate"
 
 class Server
     constructor: (@core, @options, @log) ->
@@ -65,9 +68,11 @@ class Server
                     res.status(404).json status: 404, error: "Audio not found"
                 else
                     res.type req.params.format
+                    res.set CACHE_HEADER, CACHE
                     res.send audio
 
         @app.get "/:stream/info", (req, res) =>
+            res.set CACHE_HEADER, NO_CACHE
             res.json format: req.stream.opts.format, codec: req.stream.opts.codec, archived: req.stream.archiver?
 
         @app.get "/:stream/preview", (req, res) =>
@@ -80,6 +85,7 @@ class Server
                     res.status(404).json status: 404, error: "Preview not found"
                 else
                     res.set "X-Archiver-Preview-Length", preview.length
+                    res.set CACHE_HEADER, NO_CACHE
                     res.json preview
 
         @app.get "/:stream/segments/:segment", (req, res) =>
@@ -91,6 +97,7 @@ class Server
                 else if not segment
                     res.status(404).json status: 404, error: "Segment not found"
                 else
+                    res.set CACHE_HEADER, NO_CACHE
                     res.json segment
 
         @app.get "/:stream/waveform/:segment", (req, res) =>
@@ -102,6 +109,7 @@ class Server
                 else if not waveform
                     res.status(404).json status: 404, error: "Waveform not found"
                 else
+                    res.set CACHE_HEADER, NO_CACHE
                     res.json waveform
 
         @app.post "/:stream/comments", bodyParser.json(), (req, res) =>
@@ -111,6 +119,7 @@ class Server
                 if error
                     res.status(500).json status: 500, error: error?.stack or error
                 else
+                    res.set CACHE_HEADER, NO_CACHE
                     res.json comment
 
         @app.get "/:stream/comments", (req, res) =>
@@ -123,6 +132,7 @@ class Server
                     res.status(404).json status: 404, error: "Comments not found"
                 else
                     res.set "X-Archiver-Comments-Length", comments.length
+                    res.set CACHE_HEADER, NO_CACHE
                     res.json comments
 
         @app.get "/:stream/comments/:comment", (req, res) =>
@@ -134,6 +144,7 @@ class Server
                 else if not comment
                     res.status(404).json status: 404, error: "Comment not found"
                 else
+                    res.set CACHE_HEADER, NO_CACHE
                     res.json comment
 
         @app.get "/:stream/export", compression(filter: -> true), (req, res) =>
@@ -155,6 +166,7 @@ class Server
                     res.set "X-Archiver-Export-Length", exp.length
                     res.set "Content-Disposition", "attachment; filename=\"#{exp.filename}\""
                     res.set "X-Archiver-Filename", exp.filename
+                    res.set CACHE_HEADER, CACHE
                     exp.pipe(res).end()
 
         @app.post "/:stream/export", (req, res) =>
@@ -168,7 +180,8 @@ class Server
                 else if not exp or not exp.length
                     res.status(404).json status: 404, error: "Export not found"
                 else
-                    res.send _.pick exp, exportKeys
+                    res.set CACHE_HEADER, NO_CACHE
+                    res.json _.pick exp, exportKeys
 
         @app.get "/:stream/export/:id", (req, res) =>
             if not @options.outputs?.export?.enabled or not req.stream.archiver
@@ -178,6 +191,7 @@ class Server
                     res.status(500).json status: 500, error: error?.stack or error
                 else
                     res.type req.stream.opts.format
+                    res.set CACHE_HEADER, CACHE
                     res.send exp
 
         @app.delete "/:stream/export/:id", (req, res) =>
@@ -196,7 +210,8 @@ class Server
                 if error
                     res.status(500).json status: 500, error: error?.stack or error
                 else
-                    res.send exports
+                    res.set CACHE_HEADER, NO_CACHE
+                    res.json exports
 
         @_server = @app.listen @options.port,() =>
             debug "Listing on port #{@options.port}"

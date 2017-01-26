@@ -1,4 +1,4 @@
-var Server, _, bodyParser, compression, cors, debug, exportKeys, express, moment, onHeaders;
+var CACHE, CACHE_HEADER, NO_CACHE, Server, _, bodyParser, compression, cors, debug, exportKeys, express, moment, onHeaders;
 
 cors = require("cors");
 
@@ -17,6 +17,12 @@ compression = require("compression");
 debug = require("debug")("sm:archiver:server");
 
 exportKeys = ["id", "format", "to", "from"];
+
+CACHE_HEADER = "Cache-Control";
+
+CACHE = "max-age=3600, smax-age=86400";
+
+NO_CACHE = "max-age=0, no-cache, must-revalidate";
 
 Server = (function() {
   function Server(core, options, log) {
@@ -118,6 +124,7 @@ Server = (function() {
             });
           } else {
             res.type(req.params.format);
+            res.set(CACHE_HEADER, CACHE);
             return res.send(audio);
           }
         });
@@ -125,6 +132,7 @@ Server = (function() {
     })(this));
     this.app.get("/:stream/info", (function(_this) {
       return function(req, res) {
+        res.set(CACHE_HEADER, NO_CACHE);
         return res.json({
           format: req.stream.opts.format,
           codec: req.stream.opts.codec,
@@ -153,6 +161,7 @@ Server = (function() {
             });
           } else {
             res.set("X-Archiver-Preview-Length", preview.length);
+            res.set(CACHE_HEADER, NO_CACHE);
             return res.json(preview);
           }
         });
@@ -178,6 +187,7 @@ Server = (function() {
               error: "Segment not found"
             });
           } else {
+            res.set(CACHE_HEADER, NO_CACHE);
             return res.json(segment);
           }
         });
@@ -203,6 +213,7 @@ Server = (function() {
               error: "Waveform not found"
             });
           } else {
+            res.set(CACHE_HEADER, NO_CACHE);
             return res.json(waveform);
           }
         });
@@ -223,6 +234,7 @@ Server = (function() {
               error: (error != null ? error.stack : void 0) || error
             });
           } else {
+            res.set(CACHE_HEADER, NO_CACHE);
             return res.json(comment);
           }
         });
@@ -249,6 +261,7 @@ Server = (function() {
             });
           } else {
             res.set("X-Archiver-Comments-Length", comments.length);
+            res.set(CACHE_HEADER, NO_CACHE);
             return res.json(comments);
           }
         });
@@ -274,6 +287,7 @@ Server = (function() {
               error: "Comment not found"
             });
           } else {
+            res.set(CACHE_HEADER, NO_CACHE);
             return res.json(comment);
           }
         });
@@ -321,6 +335,7 @@ Server = (function() {
             res.set("X-Archiver-Export-Length", exp.length);
             res.set("Content-Disposition", "attachment; filename=\"" + exp.filename + "\"");
             res.set("X-Archiver-Filename", exp.filename);
+            res.set(CACHE_HEADER, CACHE);
             return exp.pipe(res).end();
           }
         });
@@ -352,7 +367,8 @@ Server = (function() {
               error: "Export not found"
             });
           } else {
-            return res.send(_.pick(exp, exportKeys));
+            res.set(CACHE_HEADER, NO_CACHE);
+            return res.json(_.pick(exp, exportKeys));
           }
         });
       };
@@ -374,6 +390,7 @@ Server = (function() {
             });
           } else {
             res.type(req.stream.opts.format);
+            res.set(CACHE_HEADER, CACHE);
             return res.send(exp);
           }
         });
@@ -420,7 +437,8 @@ Server = (function() {
               error: (error != null ? error.stack : void 0) || error
             });
           } else {
-            return res.send(exports);
+            res.set(CACHE_HEADER, NO_CACHE);
+            return res.json(exports);
           }
         });
       };
