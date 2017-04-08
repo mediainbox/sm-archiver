@@ -5,7 +5,7 @@ node_modules
 **/v8/build
 
 #config
-config/testing.json
+config/test*
 
 #mac
 .DS_Store

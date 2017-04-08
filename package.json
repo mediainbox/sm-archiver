@@ -26,6 +26,7 @@
     "nconf": "0.8.4",
     "node-statsd": "0.1.1",
     "on-headers": "1.0.1",
+    "request": "2.79.0",
     "sm-waveform": "0.1.0",
     "streammachine": "git://github.com/mediainbox/StreamMachine.git#0.7.2",
     "temp": "0.8.3",
