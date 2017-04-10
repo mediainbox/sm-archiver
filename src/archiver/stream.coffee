@@ -202,15 +202,18 @@ class StreamArchiver extends require("events").EventEmitter
 
     getAudiosFromMemory: (options, callback) ->
         return callback() if not @stores.memory
-        callback null, @stores.memory.getAudios(options)
+        callback null, @stores.memory.getSegments(options).map (segment) ->
+            audio = segment.audio
+            audio.segment = segment
+            audio
 
     #----------
 
     getAudiosFromS3: (options, callback) ->
         return callback() if not @stores.s3
-        @getSegmentsFromElasticsearch options, "id", (error, segments) =>
+        @getSegmentsFromElasticsearch options, null, (error, segments) =>
             return callback error, [] if error or not segments or not segments.length
-            @stores.s3.getAudiosByIds(segments)
+            @stores.s3.getAudiosBySegments(segments)
                 .then((audios) -> return callback null, audios)
                 .catch((error) -> callback(error))
 
@@ -298,7 +301,7 @@ class StreamArchiver extends require("events").EventEmitter
     #----------
 
     generateExport: (audios, options, callback) ->
-        callback null, (new ExportOutput @stream, options).append(audios)
+        callback null, (new ExportOutput @stream, options).append(audios).trim()
 
     #----------
 

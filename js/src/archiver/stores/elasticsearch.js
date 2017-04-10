@@ -141,7 +141,6 @@ ElasticsearchStore = (function() {
       query.range.id.gte = options.from;
       query.range.id.lt = options.to || last;
     }
-    debug(query);
     return this.search({
       index: this.stream.key,
       type: type,
@@ -154,7 +153,6 @@ ElasticsearchStore = (function() {
       return function(result) {
         return P.map(result.hits.hits, function(hit) {
           var ref;
-          debug(hit);
           if (attribute) {
             return (ref = hit._source) != null ? ref[attribute] : void 0;
           } else {

@@ -125,7 +125,6 @@ class ElasticsearchStore
         else if options.from or options.to
             query.range.id.gte = options.from
             query.range.id.lt = options.to or last
-        debug query
         @search(index: @stream.key, type: type, body: {
             size: @options.size,
             sort: "id",
@@ -133,7 +132,6 @@ class ElasticsearchStore
         })
         .then((result) =>
             P.map(result.hits.hits, (hit) =>
-                debug hit
                 if attribute then hit._source?[attribute] else hit._source
             )
         )

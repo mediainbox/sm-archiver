@@ -47,6 +47,19 @@ S3Store = (function() {
     });
   };
 
+  S3Store.prototype.getAudiosBySegments = function(segments) {
+    return P.map(segments, (function(_this) {
+      return function(segment) {
+        return _this.getAudioById(segment.id).then(function(audio) {
+          audio.segment = segment;
+          return audio;
+        })["catch"](function() {});
+      };
+    })(this)).filter(function(audio) {
+      return audio;
+    });
+  };
+
   S3Store.prototype.getExportById = function(id, format) {
     if (format && format !== this.format) {
       return P.resolve();

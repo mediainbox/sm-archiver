@@ -300,19 +300,24 @@ StreamArchiver = (function(superClass) {
     if (!this.stores.memory) {
       return callback();
     }
-    return callback(null, this.stores.memory.getAudios(options));
+    return callback(null, this.stores.memory.getSegments(options).map(function(segment) {
+      var audio;
+      audio = segment.audio;
+      audio.segment = segment;
+      return audio;
+    }));
   };
 
   StreamArchiver.prototype.getAudiosFromS3 = function(options, callback) {
     if (!this.stores.s3) {
       return callback();
     }
-    return this.getSegmentsFromElasticsearch(options, "id", (function(_this) {
+    return this.getSegmentsFromElasticsearch(options, null, (function(_this) {
       return function(error, segments) {
         if (error || !segments || !segments.length) {
           return callback(error, []);
         }
-        return _this.stores.s3.getAudiosByIds(segments).then(function(audios) {
+        return _this.stores.s3.getAudiosBySegments(segments).then(function(audios) {
           return callback(null, audios);
         })["catch"](function(error) {
           return callback(error);
@@ -436,7 +441,7 @@ StreamArchiver = (function(superClass) {
   };
 
   StreamArchiver.prototype.generateExport = function(audios, options, callback) {
-    return callback(null, (new ExportOutput(this.stream, options)).append(audios));
+    return callback(null, (new ExportOutput(this.stream, options)).append(audios).trim());
   };
 
   StreamArchiver.prototype.saveExport = function(options, callback) {

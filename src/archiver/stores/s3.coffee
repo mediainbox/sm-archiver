@@ -29,6 +29,19 @@ class S3Store
 
     #----------
 
+    getAudiosBySegments: (segments) ->
+        return P.map(
+            segments, (segment) =>
+                @getAudioById(segment.id)
+                    .then (audio) ->
+                        audio.segment = segment
+                        audio
+                    .catch(->)
+        )
+        .filter (audio) -> audio
+
+    #----------
+
     getExportById: (id, format) =>
         return P.resolve() if format and format != @format
         @getFile("exports/#{id}.#{format or @format}") \
