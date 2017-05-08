@@ -23,11 +23,27 @@ class ExportOutput
         return @ if not audios.length or @ended
         _.each audios, (audio) ->
             return if @length == @max
+            if not @length
+                @first = audio
             @audios.push audio
             @length++
             @size += audio.length
+            @last = audio
         , @
         debug "Current length for #{@stream.key} is #{@length}"
+        @
+
+    #----------
+
+    trim: () ->
+        if @offsetFrom
+            firstOld = @audios[0].length;
+            @audios[0] = @first.slice(@offsetFrom * @first.length / @first.segment.duration)
+            @size -= firstOld - @audios[0].length
+        if @offsetTo
+            lastOld = @audios[@length - 1].length;
+            @audios[@length - 1] = @last.slice(0, -(@offsetTo * @last.length / @last.segment.duration))
+            @size -= lastOld - @audios[@length - 1].length
         @
 
     #----------

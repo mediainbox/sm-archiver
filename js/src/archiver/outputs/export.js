@@ -36,11 +36,30 @@ ExportOutput = (function() {
       if (this.length === this.max) {
         return;
       }
+      if (!this.length) {
+        this.first = audio;
+      }
       this.audios.push(audio);
       this.length++;
-      return this.size += audio.length;
+      this.size += audio.length;
+      return this.last = audio;
     }, this);
     debug("Current length for " + this.stream.key + " is " + this.length);
+    return this;
+  };
+
+  ExportOutput.prototype.trim = function() {
+    var firstOld, lastOld;
+    if (this.offsetFrom) {
+      firstOld = this.audios[0].length;
+      this.audios[0] = this.first.slice(this.offsetFrom * this.first.length / this.first.segment.duration);
+      this.size -= firstOld - this.audios[0].length;
+    }
+    if (this.offsetTo) {
+      lastOld = this.audios[this.length - 1].length;
+      this.audios[this.length - 1] = this.last.slice(0, -(this.offsetTo * this.last.length / this.last.segment.duration));
+      this.size -= lastOld - this.audios[this.length - 1].length;
+    }
     return this;
   };
 

@@ -45,7 +45,6 @@ AudioTransformer = (function(superClass) {
         duration = 0;
         meta = null;
         tag = null;
-        debug(segment.pts);
         if (segment.pts) {
           tag = new Buffer(PTS_TAG);
           if (segment.pts > Math.pow(2, 32) - 1) {
