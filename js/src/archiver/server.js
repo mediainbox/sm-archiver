@@ -1,4 +1,4 @@
-var CACHE, CACHE_HEADER, NO_CACHE, Server, _, bodyParser, compression, cors, debug, exportKeys, express, moment, onHeaders;
+var CACHE, CACHE_HEADER, NO_CACHE, Server, _, bodyParser, compression, cors, debug, exportKeys, express, moment, onHeaders, sizeof;
 
 cors = require("cors");
 
@@ -9,6 +9,8 @@ moment = require("moment");
 express = require("express");
 
 onHeaders = require("on-headers");
+
+sizeof = require("object-sizeof");
 
 bodyParser = require("body-parser");
 
@@ -132,12 +134,24 @@ Server = (function() {
     })(this));
     this.app.get("/:stream/info", (function(_this) {
       return function(req, res) {
+        var info;
         res.set(CACHE_HEADER, NO_CACHE);
-        return res.json({
+        info = {
           format: req.stream.opts.format,
           codec: req.stream.opts.codec,
-          archived: req.stream.archiver != null
-        });
+          archived: req.stream.archiver != null,
+          stores: {},
+          memory: process.memoryUsage()
+        };
+        if (info.archived) {
+          _.each(req.stream.archiver.stores, function(store, name) {
+            return info.stores[name] = true;
+          });
+          if (info.stores.memory) {
+            info.memory.cache = sizeof(req.stream.archiver.stores.memory.segments);
+          }
+        }
+        return res.json(info);
       };
     })(this));
     this.app.get("/:stream/preview", (function(_this) {
