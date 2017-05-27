@@ -96,8 +96,8 @@ class StreamArchiver extends require("events").EventEmitter
     getSegmentsFromElasticsearch: (options, attribute, callback) ->
         return callback() if not @stores.elasticsearch
         @stores.elasticsearch.getSegments(options, attribute)
-        .then((segments) -> return callback null, segments)
-        .catch(() -> callback())
+            .then((segments) -> return callback null, segments)
+            .catch(() -> callback())
 
     #----------
 
@@ -144,7 +144,10 @@ class StreamArchiver extends require("events").EventEmitter
         previewTransformer.on "end", =>
             callback null, preview
         _.each segments, (segment) =>
-            wavedataTransformer.write segment
+            try
+                wavedataTransformer.write segment
+            catch e
+                debug e
         previewTransformer.end()
 
     #----------

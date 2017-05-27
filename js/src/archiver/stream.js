@@ -216,7 +216,13 @@ StreamArchiver = (function(superClass) {
     })(this));
     _.each(segments, (function(_this) {
       return function(segment) {
-        return wavedataTransformer.write(segment);
+        var e, error1;
+        try {
+          return wavedataTransformer.write(segment);
+        } catch (error1) {
+          e = error1;
+          return debug(e);
+        }
       };
     })(this));
     return previewTransformer.end();

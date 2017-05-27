@@ -120,11 +120,10 @@ class ElasticsearchStore
                 }
             }
         }
-        if options.allowUnlimited and not options.from and not options.to
-            query = undefined
-        else if options.from or options.to
-            query.range.id.gte = options.from
-            query.range.id.lt = options.to or last
+        if options.from and not options.to
+            delete query.range.id.lt
+        else if options.to and not options.from
+            delete query.range.id.gte
         @search(index: @stream.key, type: type, body: {
             size: @options.size,
             sort: "id",
