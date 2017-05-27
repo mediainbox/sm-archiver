@@ -3,6 +3,7 @@ _ = require "underscore"
 moment = require "moment"
 express = require "express"
 onHeaders = require "on-headers"
+sizeof = require "object-sizeof"
 bodyParser = require "body-parser"
 compression = require "compression"
 debug = require("debug") "sm:archiver:server"
@@ -73,7 +74,18 @@ class Server
 
         @app.get "/:stream/info", (req, res) =>
             res.set CACHE_HEADER, NO_CACHE
-            res.json format: req.stream.opts.format, codec: req.stream.opts.codec, archived: req.stream.archiver?
+            info =
+                format: req.stream.opts.format,
+                codec: req.stream.opts.codec,
+                archived: req.stream.archiver?,
+                stores: {},
+                memory: process.memoryUsage()
+            if info.archived
+                _.each req.stream.archiver.stores, (store, name) ->
+                    info.stores[name] = true
+                if info.stores.memory
+                    info.memory.cache = sizeof req.stream.archiver.stores.memory.segments
+            res.json info
 
         @app.get "/:stream/preview", (req, res) =>
             if not req.stream.archiver
