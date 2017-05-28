@@ -135,11 +135,10 @@ ElasticsearchStore = (function() {
         }
       }
     };
-    if (options.allowUnlimited && !options.from && !options.to) {
-      query = void 0;
-    } else if (options.from || options.to) {
-      query.range.id.gte = options.from;
-      query.range.id.lt = options.to || last;
+    if (options.from && !options.to) {
+      delete query.range.id.lt;
+    } else if (options.to && !options.from) {
+      delete query.range.id.gte;
     }
     return this.search({
       index: this.stream.key,
