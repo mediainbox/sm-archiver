@@ -62,6 +62,7 @@ class StreamArchiver extends require("events").EventEmitter
                 debug "Segment #{seg.id} archived"
 
         @stream.source.on "hls_snapshot", (snapshot) =>
+            return debug "HLS Snapshot failed via broadcast from #{@stream.key}" if not snapshot
             debug "HLS Snapshot received via broadcast from #{@stream.key} (#{snapshot.segments.length} segments)"
             @stream.emit "hls_snapshot", snapshot
 
