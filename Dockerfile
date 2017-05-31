@@ -29,6 +29,7 @@ RUN cd sm-archiver && npm install && npm run compile:v8
 RUN cd sm-archiver && cp -a src/archiver/monitors/v8/* js/src/archiver/monitors/v8/
 COPY archiver.json.j2 /config/
 COPY docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
 
 VOLUME "/config"
 
