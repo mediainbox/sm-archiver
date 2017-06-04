@@ -82,6 +82,9 @@ StreamArchiver = (function(superClass) {
     })(this));
     this.stream.source.on("hls_snapshot", (function(_this) {
       return function(snapshot) {
+        if (!snapshot) {
+          return debug("HLS Snapshot failed via broadcast from " + _this.stream.key);
+        }
         debug("HLS Snapshot received via broadcast from " + _this.stream.key + " (" + snapshot.segments.length + " segments)");
         return _this.stream.emit("hls_snapshot", snapshot);
       };
@@ -216,7 +219,13 @@ StreamArchiver = (function(superClass) {
     })(this));
     _.each(segments, (function(_this) {
       return function(segment) {
-        return wavedataTransformer.write(segment);
+        var e, error1;
+        try {
+          return wavedataTransformer.write(segment);
+        } catch (error1) {
+          e = error1;
+          return debug(e);
+        }
       };
     })(this));
     return previewTransformer.end();

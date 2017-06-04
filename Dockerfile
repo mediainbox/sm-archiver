@@ -1,23 +1,37 @@
-FROM cdgraff/ffmpeg
+# Jinja2 Template idea from: https://tryolabs.com/blog/2015/03/26/configurable-docker-containers-for-multiple-environments/
 
-RUN rm /etc/localtime \
-&& ln -s /usr/share/zoneinfo/Etc/UTC /etc/localtime
+FROM mediainbox/base
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update -y \
-&& DEBIAN_FRONTEND=noninteractive apt-get install -y curl software-properties-common
+# Maintener
+MAINTAINER Alejandro Ferrari <aferrari@mediainbox.net>
 
-RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:andrewrk/libgroove \
-&& DEBIAN_FRONTEND=noninteractive apt-get update -y \
-&& DEBIAN_FRONTEND=noninteractive apt-get install -y libgroove-dev
+# Change localtime
+RUN rm /etc/localtime && ln -s /usr/share/zoneinfo/Etc/UTC /etc/localtime
 
-RUN DEBIAN_FRONTEND=noninteractive curl -sL https://deb.nodesource.com/setup_4.x | sudo -E bash - \
-&& DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+RUN apk add --update \
+    python \
+    python-dev \
+    py-pip \
+    py-setuptools \
+    build-base \
+    tar \
+    bzip2 \
+    nasm \
+    git \
+    bash \
+    curl
+RUN pip install --upgrade pip && pip install j2cli
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get clean \
-&& rm -rf /var/lib/apt/lists/*
+WORKDIR /srv
+RUN git clone https://github.com/mediainbox/sm-archiver.git
+# Master Branch
+RUN cd sm-archiver && npm install && npm run compile:v8
+RUN cd sm-archiver && cp -a src/archiver/monitors/v8/* js/src/archiver/monitors/v8/
+COPY archiver.json.j2 /config/
+COPY docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
 
-WORKDIR /data
+VOLUME "/config"
 
-EXPOSE 9001
-
-CMD npm start
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["sm-archiver/runner-cmd", "--config", "/config/archiver.json"]
