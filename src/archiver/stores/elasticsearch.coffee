@@ -55,9 +55,9 @@ class ElasticsearchStore
 
     indexOne: (type, id, body) ->
         debug "Indexing #{type} #{id}"
-        @index(index: @stream.key, type: type, id: id, body: body) \
-        .catch (error) =>
-            debug "INDEX #{type} Error for #{@stream.key}/#{id}: #{error}"
+        @index(index: @stream.key, type: type, id: id, body: body)
+            .catch (error) =>
+                debug "INDEX #{type} Error for #{@stream.key}/#{id}: #{error}"
 
     #----------
 
