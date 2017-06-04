@@ -93,4 +93,14 @@ runner = new Runner(nconf.get());
 
 runner.initialize();
 
+process.on("uncaughtException", (function(_this) {
+  return function(err) {
+    debug(err);
+    if (("" + err) === "Error: got binary data when not reconstructing a packet") {
+      return;
+    }
+    return process.exit(1);
+  };
+})(this));
+
 //# sourceMappingURL=runner.js.map
