@@ -1,10 +1,10 @@
 var MemoryStore, R_TIMESTAMP, _, debug, moment;
 
-_ = require("underscore");
+_ = require('underscore');
 
-moment = require("moment");
+moment = require('moment');
 
-debug = require("debug")("sm:archiver:stores:memory");
+debug = require('debug')('sm:archiver:stores:memory');
 
 R_TIMESTAMP = /^[1-9][0-9]*$/;
 
@@ -60,20 +60,20 @@ MemoryStore = (function() {
   };
 
   MemoryStore.prototype.getWaveform = function(id) {
-    return this.getOne(id, "waveform");
+    return this.getOne(id, 'waveform');
   };
 
   MemoryStore.prototype.getAudio = function(id) {
-    return this.getOne(id, "audio");
+    return this.getOne(id, 'audio');
   };
 
   MemoryStore.prototype.getComment = function(id) {
-    return this.getOne(id, "comment");
+    return this.getOne(id, 'comment');
   };
 
   MemoryStore.prototype.getOne = function(id, attribute) {
     var ref;
-    debug("Getting " + (attribute || "segment") + " " + id + " from " + this.stream.key);
+    debug("Getting " + (attribute || 'segment') + " " + id + " from " + this.stream.key);
     if (attribute) {
       return (ref = this.segments[id]) != null ? ref[attribute] : void 0;
     } else {
@@ -86,11 +86,11 @@ MemoryStore = (function() {
   };
 
   MemoryStore.prototype.getComments = function(options) {
-    return this.getMany(options, "comment");
+    return this.getMany(options, 'comment');
   };
 
   MemoryStore.prototype.getAudios = function(options) {
-    return this.getMany(options, "audio");
+    return this.getMany(options, 'audio');
   };
 
   MemoryStore.prototype.getMany = function(options, attribute) {
@@ -99,15 +99,13 @@ MemoryStore = (function() {
     last = _.last(this.index);
     from = this.parseId(options.from, first);
     to = this.parseId(options.to, last);
-    debug("Searching " + (attribute || "segment") + "s " + from + " -> " + to + " from " + this.stream.key);
+    debug("Searching " + (attribute || 'segment') + "s " + from + " -> " + to + " from " + this.stream.key);
     if (from < first || to <= first) {
       return [];
     }
-    segments = _.values(_.pick(this.segments, _.filter(this.index, (function(_this) {
-      return function(id) {
-        return id >= from && id < to;
-      };
-    })(this))));
+    segments = _.values(_.pick(this.segments, _.filter(this.index, function(id) {
+      return id >= from && id < to;
+    })));
     if (attribute) {
       return _.pluck(segments, attribute);
     } else {

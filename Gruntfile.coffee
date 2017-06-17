@@ -1,6 +1,10 @@
 module.exports = (grunt) ->
     grunt.initConfig
-        pkg: grunt.file.readJSON 'package.json'
+        pkg: grunt.file.readJSON "package.json"
+        coffeelint:
+            app: ["src/**/*.coffee"]
+            options:
+                configFile: "coffeelint.json"
         coffee:
             coffee_to_js:
                 options:
@@ -9,7 +13,7 @@ module.exports = (grunt) ->
                 expand: true
                 flatten: false
                 src: ["src/**/*.coffee"]
-                dest: 'js/'
+                dest: "js/"
                 ext: ".js"
         copy:
             v8:
@@ -18,7 +22,8 @@ module.exports = (grunt) ->
                 src: ["build/**/*"],
                 dest: "js/src/archiver/monitors/v8/"
 
-    grunt.loadNpmTasks 'grunt-contrib-coffee'
-    grunt.loadNpmTasks 'grunt-contrib-copy'
+    grunt.loadNpmTasks "grunt-coffeelint"
+    grunt.loadNpmTasks "grunt-contrib-coffee"
+    grunt.loadNpmTasks "grunt-contrib-copy"
 
-    grunt.registerTask 'default', ['coffee', 'copy']
+    grunt.registerTask "default", ["coffeelint", "coffee", "copy"]

@@ -1,12 +1,12 @@
 var HlsOutput, _, debug, m3u, moment;
 
-m3u = require("m3u");
+m3u = require('m3u');
 
-_ = require("underscore");
+_ = require('underscore');
 
-moment = require("moment");
+moment = require('moment');
 
-debug = require("debug")("sm:archiver:outputs:hls");
+debug = require('debug')('sm:archiver:outputs:hls');
 
 HlsOutput = (function() {
   function HlsOutput(stream) {
@@ -25,7 +25,7 @@ HlsOutput = (function() {
     }
     if (!this.length) {
       this.mediaSequence(_.first(segments).id);
-      this.comment("EXT-X-INDEPENDENT-SEGMENTS");
+      this.comment('EXT-X-INDEPENDENT-SEGMENTS');
     }
     _.each(segments, function(segment) {
       var ts;

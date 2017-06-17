@@ -1,6 +1,6 @@
-bindings = require "bindings"
+bindings = require 'bindings'
 
-module.exports = (dirname, binding) =>
+module.exports = (dirname, binding) ->
     bindings
         module_root: dirname,
         bindings: binding

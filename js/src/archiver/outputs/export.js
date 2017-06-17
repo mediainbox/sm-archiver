@@ -1,13 +1,13 @@
 var ExportOutput, PassThrough, _, debug, moment,
   bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-_ = require("underscore");
+_ = require('underscore');
 
-moment = require("moment");
+moment = require('moment');
 
-PassThrough = require("stream").PassThrough;
+PassThrough = require('stream').PassThrough;
 
-debug = require("debug")("sm:archiver:outputs:export");
+debug = require('debug')('sm:archiver:outputs:export');
 
 ExportOutput = (function() {
   function ExportOutput(stream, options) {
@@ -23,7 +23,7 @@ ExportOutput = (function() {
     this.size = 0;
     this.format = this.stream.opts.format;
     this.filename = this.stream.key + "-" + this.id + "." + this.format;
-    this.passThrough.on("end", this.onEnd);
+    this.passThrough.on('end', this.onEnd);
     _.extend(this, options);
     debug("Created for " + this.stream.key);
   }

@@ -1,6 +1,6 @@
-debug = require("debug") "sm:archiver:transformers:memory"
+debug = require('debug') 'sm:archiver:transformers:memory'
 
-class MemoryStoreTransformer extends require("stream").Transform
+class MemoryStoreTransformer extends require('stream').Transform
     constructor: (@stream, @memory, @options) ->
         super objectMode: true
         debug "Created for #{@stream.key}"

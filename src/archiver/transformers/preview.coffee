@@ -1,6 +1,6 @@
-debug = require("debug") "sm:archiver:transformers:preview"
+debug = require('debug') 'sm:archiver:transformers:preview'
 
-class PreviewTransformer extends require("stream").Transform
+class PreviewTransformer extends require('stream').Transform
     constructor: (@stream, @width, @length) ->
         @psegWidth = Math.ceil @width / @length
         super objectMode: true

@@ -1,35 +1,35 @@
-_ = require "underscore"
-moment = require "moment"
-IdTransformer = require "./transformers/id"
-AudioTransformer = require "./transformers/audio"
-WaveformTransformer = require "./transformers/waveform"
-WavedataTransformer = require "./transformers/wavedata"
-PreviewTransformer = require "./transformers/preview"
-MemoryStore = require "./stores/memory"
-QueueMemoryStoreTransformer = require "./transformers/stores/memory/queue"
-MemoryStoreTransformer = require "./transformers/stores/memory"
-ElasticsearchStore = require "./stores/elasticsearch"
-ElasticsearchStoreTransformer = require "./transformers/stores/elasticsearch"
-S3Store = require "./stores/s3"
-S3StoreTransformer = require "./transformers/stores/s3"
-HlsOutput = require "./outputs/hls"
-ExportOutput = require "./outputs/export"
-debug = require("debug") "sm:archiver:stream"
+_ = require 'underscore'
+moment = require 'moment'
+IdTransformer = require './transformers/id'
+AudioTransformer = require './transformers/audio'
+WaveformTransformer = require './transformers/waveform'
+WavedataTransformer = require './transformers/wavedata'
+PreviewTransformer = require './transformers/preview'
+MemoryStore = require './stores/memory'
+QueueMemoryStoreTransformer = require './transformers/stores/memory/queue'
+MemoryStoreTransformer = require './transformers/stores/memory'
+ElasticsearchStore = require './stores/elasticsearch'
+ElasticsearchStoreTransformer = require './transformers/stores/elasticsearch'
+S3Store = require './stores/s3'
+S3StoreTransformer = require './transformers/stores/s3'
+HlsOutput = require './outputs/hls'
+ExportOutput = require './outputs/export'
+debug = require('debug') 'sm:archiver:stream'
 segmentKeys = [
-    "id",
-    "ts",
-    "end_ts",
-    "ts_actual",
-    "end_ts_actual",
-    "data_length",
-    "duration",
-    "discontinuitySeq",
-    "pts",
-    "preview",
-    "comment"
+    'id',
+    'ts',
+    'end_ts',
+    'ts_actual',
+    'end_ts_actual',
+    'data_length',
+    'duration',
+    'discontinuitySeq',
+    'pts',
+    'preview',
+    'comment'
 ]
 
-class StreamArchiver extends require("events").EventEmitter
+class StreamArchiver extends require('events').EventEmitter
     constructor: (@stream, @options) ->
         @stores = {}
         @transformers = [
@@ -53,25 +53,25 @@ class StreamArchiver extends require("events").EventEmitter
         @transformers.unshift new IdTransformer @stream
 
         _.each @transformers, (transformer, index) =>
-            previous = @transformers[index - 1];
+            previous = @transformers[index - 1]
             if (previous)
                 previous.pipe(transformer)
 
-        _.last(@transformers).on "readable", =>
+        _.last(@transformers).on 'readable', =>
             while seg = _.last(@transformers).read()
                 debug "Segment #{seg.id} archived"
 
-        @stream.source.on "hls_snapshot", (snapshot) =>
+        @stream.source.on 'hls_snapshot', (snapshot) =>
             return debug "HLS Snapshot failed via broadcast from #{@stream.key}" if not snapshot
             debug "HLS Snapshot received via broadcast from #{@stream.key} (#{snapshot.segments.length} segments)"
-            @stream.emit "hls_snapshot", snapshot
+            @stream.emit 'hls_snapshot', snapshot
 
         @stream._once_source_loaded =>
             @stream.source.getHLSSnapshot (error, snapshot) =>
                 debug "HLS snapshot from initial source load of #{@stream.key} (#{snapshot.segments.length} segments)"
-                @stream.emit "hls_snapshot", snapshot
+                @stream.emit 'hls_snapshot', snapshot
 
-        @stream.on "hls_snapshot", (snapshot) =>
+        @stream.on 'hls_snapshot', (snapshot) =>
             for segment in snapshot.segments
                 _.first(@transformers).write segment
 
@@ -82,7 +82,7 @@ class StreamArchiver extends require("events").EventEmitter
     getSegments: (options, callback) ->
         @getSegmentsFromMemory options, (error, segments) =>
             return callback error, segments if error or (segments and segments.length)
-            @getSegmentsFromElasticsearch options, null, (error, segments) =>
+            @getSegmentsFromElasticsearch options, null, (error, segments) ->
                 return callback error, segments if error or (segments and segments.length)
                 return callback null, []
 
@@ -104,9 +104,9 @@ class StreamArchiver extends require("events").EventEmitter
 
     getSegment: (id, callback) ->
         @getSegmentFromMemory id, (error, segment) =>
-            return callback error, (_.pick(segment, segmentKeys.concat(["waveform"])) if segment) if error or segment
-            @getSegmentFromElasticsearch id, (error, segment) =>
-                return callback error, (_.pick(segment, segmentKeys.concat(["waveform"])) if segment)
+            return callback error, (_.pick(segment, segmentKeys.concat(['waveform'])) if segment) if error or segment
+            @getSegmentFromElasticsearch id, (error, segment) ->
+                return callback error, (_.pick(segment, segmentKeys.concat(['waveform'])) if segment)
 
     #----------
 
@@ -127,7 +127,7 @@ class StreamArchiver extends require("events").EventEmitter
     getPreview: (options, callback) ->
         @getSegments options, (error, segments) =>
             return callback error, segments if error or not segments or not segments.length
-            @generatePreview segments, (error, preview) =>
+            @generatePreview segments, (error, preview) ->
                 return callback error, preview if error or (preview and preview.length)
                 return callback null, []
 
@@ -137,14 +137,14 @@ class StreamArchiver extends require("events").EventEmitter
         preview = []
         return callback(null, preview) if not segments.length
         wavedataTransformer = new WavedataTransformer @stream
-        previewTransformer = new PreviewTransformer @stream, @options.preview_width,segments.length
+        previewTransformer = new PreviewTransformer @stream, @options.preview_width, segments.length
         wavedataTransformer.pipe previewTransformer
-        previewTransformer.on "readable", =>
+        previewTransformer.on 'readable', ->
             while segment = previewTransformer.read()
                 preview.push _.pick(segment, segmentKeys)
-        previewTransformer.on "end", =>
+        previewTransformer.on 'end', ->
             callback null, preview
-        _.each segments, (segment) =>
+        _.each segments, (segment) ->
             try
                 wavedataTransformer.write segment
             catch e
@@ -198,7 +198,7 @@ class StreamArchiver extends require("events").EventEmitter
     getAudios: (options, callback) ->
         @getAudiosFromMemory options, (error, audios) =>
             return callback error, audios if error or (audios and audios.length)
-            @getAudiosFromS3 options, (error, audios) =>
+            @getAudiosFromS3 options, (error, audios) ->
                 return callback error, audios if error or (audios and audios.length)
                 return callback null, []
 
@@ -224,7 +224,7 @@ class StreamArchiver extends require("events").EventEmitter
     #----------
 
     getComment: (id, callback) ->
-        @getCommentFromMemory id, (error, comment) =>
+        @getCommentFromMemory id, (error, comment) ->
             return callback error, comment if error or comment
         @getCommentFromElasticsearch id, callback
 
@@ -245,7 +245,7 @@ class StreamArchiver extends require("events").EventEmitter
     #----------
 
     getComments: (options, callback) ->
-        @getCommentsFromElasticsearch options, (error, comments) =>
+        @getCommentsFromElasticsearch options, (error, comments) ->
             return callback error, comments if error or (comments and comments.length)
             return callback null, []
 
@@ -254,7 +254,7 @@ class StreamArchiver extends require("events").EventEmitter
     getCommentsFromElasticsearch: (options, callback) ->
         return callback() if not @stores.elasticsearch
         @stores.elasticsearch.getComments(options) \
-        .then((comments) => callback null, comments)
+        .then((comments) -> callback null, comments)
         .catch callback
 
     #----------
@@ -276,7 +276,7 @@ class StreamArchiver extends require("events").EventEmitter
     saveCommentToElasticsearch: (comment, callback) ->
         return callback null, comment if not @stores.elasticsearch
         @stores.elasticsearch.indexComment(comment) \
-        .then(() => callback null, comment)
+        .then(() -> callback null, comment)
         .catch callback
 
     #----------
@@ -321,7 +321,7 @@ class StreamArchiver extends require("events").EventEmitter
     saveExportToS3: (exp, callback) ->
         return callback() if not @stores.s3
         @stores.s3.putExport(exp)
-            .then(() => callback null, exp)
+            .then(() -> callback null, exp)
             .catch callback
 
     #----------
@@ -329,7 +329,7 @@ class StreamArchiver extends require("events").EventEmitter
     saveExportToElasticsearch: (exp, callback) ->
         return callback null, exp if not @stores.elasticsearch
         @stores.elasticsearch.indexExport(exp)
-            .then(() => callback null, exp)
+            .then(() -> callback null, exp)
             .catch callback
 
     #----------
@@ -342,7 +342,7 @@ class StreamArchiver extends require("events").EventEmitter
     getExportByIdFromS3: (id, callback) ->
         return callback() if not @stores.s3
         @stores.s3.getExportById(id)
-            .then((exp) => callback null, exp)
+            .then((exp) -> callback null, exp)
             .catch callback
 
     #----------
@@ -357,7 +357,7 @@ class StreamArchiver extends require("events").EventEmitter
     deleteExportFromElasticsearch: (id, callback) ->
         return callback() if not @stores.elasticsearch
         @stores.elasticsearch.deleteExport(id)
-            .then(() => callback())
+            .then(() -> callback())
             .catch callback
 
     #----------
@@ -365,13 +365,13 @@ class StreamArchiver extends require("events").EventEmitter
     deleteExportFromS3: (id, callback) ->
         return callback() if not @stores.s3
         @stores.s3.deleteExport(id)
-            .then(() => callback())
+            .then(() -> callback())
             .catch callback
 
     #----------
 
     getExports: (options, callback) ->
-        @getExportsFromElasticsearch options, (error, exports) =>
+        @getExportsFromElasticsearch options, (error, exports) ->
             return callback error, exports if error or (exports and exports.length)
             return callback null, []
 
@@ -380,7 +380,7 @@ class StreamArchiver extends require("events").EventEmitter
     getExportsFromElasticsearch: (options, callback) ->
         return callback() if not @stores.elasticsearch
         @stores.elasticsearch.getExports(options) \
-            .then((exports) => callback null, exports)
+            .then((exports) -> callback null, exports)
             .catch callback
 
     #----------

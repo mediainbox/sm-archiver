@@ -20,6 +20,7 @@
     "elasticsearch": "13.0.1",
     "eventemitter2": "4.1.0",
     "express": "4.15.3",
+    "grunt-coffeelint": "0.0.16",
     "m3u": "0.0.2",
     "moment": "2.18.1",
     "nan": "2.6.2",

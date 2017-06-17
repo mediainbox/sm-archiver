@@ -1,12 +1,12 @@
 var Graphite, Monitors, _, monitors;
 
-_ = require("underscore");
+_ = require('underscore');
 
-Graphite = require("./graphite");
+Graphite = require('./graphite');
 
 monitors = {
-  v8: require("./v8"),
-  server: require("./server")
+  v8: require('./v8'),
+  server: require('./server')
 };
 
 Monitors = (function() {

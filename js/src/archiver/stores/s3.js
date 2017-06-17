@@ -1,15 +1,15 @@
 var AWS, P, S3Store, _, debug, moment,
   bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-P = require("bluebird");
+P = require('bluebird');
 
-AWS = require("aws-sdk");
+AWS = require('aws-sdk');
 
-_ = require("underscore");
+_ = require('underscore');
 
-moment = require("moment");
+moment = require('moment');
 
-debug = require("debug")("sm:archiver:stores:s3");
+debug = require('debug')('sm:archiver:stores:s3');
 
 S3Store = (function() {
   function S3Store(stream, options1) {
@@ -30,11 +30,9 @@ S3Store = (function() {
     if (format && format !== this.format) {
       return P.resolve();
     }
-    return this.getFile("audio/" + id + "." + (format || this.format)).then((function(_this) {
-      return function(data) {
-        return data.Body;
-      };
-    })(this));
+    return this.getFile("audio/" + id + "." + (format || this.format)).then(function(data) {
+      return data.Body;
+    });
   };
 
   S3Store.prototype.getAudiosByIds = function(ids) {
@@ -64,11 +62,9 @@ S3Store = (function() {
     if (format && format !== this.format) {
       return P.resolve();
     }
-    return this.getFile("exports/" + id + "." + (format || this.format)).then((function(_this) {
-      return function(data) {
-        return data.Body;
-      };
-    })(this));
+    return this.getFile("exports/" + id + "." + (format || this.format)).then(function(data) {
+      return data.Body;
+    });
   };
 
   S3Store.prototype.putExport = function(exp, options) {
@@ -84,12 +80,10 @@ S3Store = (function() {
     debug("Getting " + key);
     return this.getObjectAsync({
       Key: key
-    })["catch"]((function(_this) {
-      return function(error) {
-        debug("GET Error for " + key + ": " + error);
-        throw error;
-      };
-    })(this));
+    })["catch"](function(error) {
+      debug("GET Error for " + key + ": " + error);
+      throw error;
+    });
   };
 
   S3Store.prototype.putFileIfNotExists = function(name, body, options) {
@@ -97,11 +91,9 @@ S3Store = (function() {
     key = this.prefix + "/" + name;
     return this.headObjectAsync({
       Key: key
-    }).then((function(_this) {
-      return function() {
-        return debug("Skipping " + key);
-      };
-    })(this))["catch"]((function(_this) {
+    }).then(function() {
+      return debug("Skipping " + key);
+    })["catch"]((function(_this) {
       return function(error) {
         if (error.statusCode !== 404) {
           return debug("HEAD Error for " + key + ": " + error);

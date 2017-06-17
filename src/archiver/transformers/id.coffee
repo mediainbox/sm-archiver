@@ -1,6 +1,6 @@
-debug = require("debug") "sm:archiver:transformers:id"
+debug = require('debug') 'sm:archiver:transformers:id'
 
-class IdTransformer extends require("stream").Transform
+class IdTransformer extends require('stream').Transform
     constructor: (@stream) ->
         super objectMode: true
         debug "Created for #{@stream.key}"

@@ -2,7 +2,7 @@ var IdTransformer, debug,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
-debug = require("debug")("sm:archiver:transformers:id");
+debug = require('debug')('sm:archiver:transformers:id');
 
 IdTransformer = (function(superClass) {
   extend(IdTransformer, superClass);
@@ -27,7 +27,7 @@ IdTransformer = (function(superClass) {
 
   return IdTransformer;
 
-})(require("stream").Transform);
+})(require('stream').Transform);
 
 module.exports = IdTransformer;
 

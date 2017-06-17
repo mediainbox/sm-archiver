@@ -1,34 +1,34 @@
 var Client, DEFAULT_INCREMENT, DOT, EXTREME, Graphite, HOSTNAME, P, PLACEHOLDER, SEPARATOR, SLASH, SPACE, TAGS_SEPARATOR, _, debug, rDot, rDots, rDotsExt, rSeparator, rSlash, rSpace;
 
-_ = require("underscore");
+_ = require('underscore');
 
-P = require("bluebird");
+P = require('bluebird');
 
-Client = require("node-statsd");
+Client = require('node-statsd');
 
-debug = require("debug")("sm:archiver:monitors:graphite");
+debug = require('debug')('sm:archiver:monitors:graphite');
 
-HOSTNAME = require("os").hostname();
+HOSTNAME = require('os').hostname();
 
-PLACEHOLDER = "<<separator>>";
+PLACEHOLDER = '<<separator>>';
 
 DEFAULT_INCREMENT = 1;
 
-TAGS_SEPARATOR = ",";
+TAGS_SEPARATOR = ',';
 
-SEPARATOR = ".";
+SEPARATOR = '.';
 
-EXTREME = "";
+EXTREME = '';
 
-SPACE = "_";
+SPACE = '_';
 
-SLASH = ".";
+SLASH = '.';
 
-DOT = "+";
+DOT = '+';
 
-rSeparator = new RegExp(PLACEHOLDER, "g");
+rSeparator = new RegExp(PLACEHOLDER, 'g');
 
-rSpace = new RegExp(" ", "g");
+rSpace = new RegExp(' ', 'g');
 
 rDotsExt = /(^\.|\.$)/g;
 
@@ -54,42 +54,42 @@ Graphite = (function() {
   }
 
   Graphite.prototype.timing = function(name, value, sampleRate, tags) {
-    return this.send("timing", name, value, {
+    return this.send('timing', name, value, {
       sampleRate: sampleRate,
       tags: tags
     });
   };
 
   Graphite.prototype.increment = function(name, value, sampleRate, tags) {
-    return this.send("increment", name, value || DEFAULT_INCREMENT, {
+    return this.send('increment', name, value || DEFAULT_INCREMENT, {
       sampleRate: sampleRate,
       tags: tags
     });
   };
 
   Graphite.prototype.decrement = function(name, value, sampleRate, tags) {
-    return this.send("decrement", name, value || DEFAULT_INCREMENT, {
+    return this.send('decrement', name, value || DEFAULT_INCREMENT, {
       sampleRate: sampleRate,
       tags: tags
     });
   };
 
   Graphite.prototype.histogram = function(name, value, sampleRate, tags) {
-    return this.send("histogram", name, value, {
+    return this.send('histogram', name, value, {
       sampleRate: sampleRate,
       tags: tags
     });
   };
 
   Graphite.prototype.gauge = function(name, value, sampleRate, tags) {
-    return this.send("gauge", name, value, {
+    return this.send('gauge', name, value, {
       sampleRate: sampleRate,
       tags: tags
     });
   };
 
   Graphite.prototype.unique = function(name, value, sampleRate, tags) {
-    return this.send("unique", name, value, {
+    return this.send('unique', name, value, {
       sampleRate: sampleRate,
       tags: tags
     });
