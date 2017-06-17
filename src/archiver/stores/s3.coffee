@@ -6,7 +6,7 @@ debug = require('debug') 'sm:archiver:stores:s3'
 
 class S3Store
     constructor: (@stream, @options) ->
-        _.extend(@, new AWS.S3 @options)
+        _.extend @, new AWS.S3(@options)
         P.promisifyAll @
         @prefix = "sm-archiver/#{@stream.key}"
         @format = @stream.opts.format

@@ -10,6 +10,8 @@ QueueMemoryStoreTransformer = require './transformers/stores/memory/queue'
 MemoryStoreTransformer = require './transformers/stores/memory'
 ElasticsearchStore = require './stores/elasticsearch'
 ElasticsearchStoreTransformer = require './transformers/stores/elasticsearch'
+DynamoDBStore = require './stores/dynamodb'
+DynamoDBStoreTransformer = require './transformers/stores/dynamodb'
 S3Store = require './stores/s3'
 S3StoreTransformer = require './transformers/stores/s3'
 HlsOutput = require './outputs/hls'
@@ -45,6 +47,10 @@ class StreamArchiver extends require('events').EventEmitter
         if @options.stores?.elasticsearch?.enabled
             @stores.elasticsearch = new ElasticsearchStore @stream, @options.stores.elasticsearch
             @transformers.push new ElasticsearchStoreTransformer @stream, @stores.elasticsearch
+
+        if @options.stores?.dynamodb?.enabled
+            @stores.dynamodb = new DynamoDBStore @stream, @options.stores.dynamodb
+            @transformers.push new DynamoDBStoreTransformer @stream, @stores.dynamodb
 
         if @options.stores?.s3?.enabled
             @stores.s3 = new S3Store @stream, @options.stores.s3

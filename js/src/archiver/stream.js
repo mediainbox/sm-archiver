@@ -1,4 +1,4 @@
-var AudioTransformer, ElasticsearchStore, ElasticsearchStoreTransformer, ExportOutput, HlsOutput, IdTransformer, MemoryStore, MemoryStoreTransformer, PreviewTransformer, QueueMemoryStoreTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, moment, segmentKeys,
+var AudioTransformer, DynamoDBStore, DynamoDBStoreTransformer, ElasticsearchStore, ElasticsearchStoreTransformer, ExportOutput, HlsOutput, IdTransformer, MemoryStore, MemoryStoreTransformer, PreviewTransformer, QueueMemoryStoreTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, moment, segmentKeys,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
@@ -26,6 +26,10 @@ ElasticsearchStore = require('./stores/elasticsearch');
 
 ElasticsearchStoreTransformer = require('./transformers/stores/elasticsearch');
 
+DynamoDBStore = require('./stores/dynamodb');
+
+DynamoDBStoreTransformer = require('./transformers/stores/dynamodb');
+
 S3Store = require('./stores/s3');
 
 S3StoreTransformer = require('./transformers/stores/s3');
@@ -42,7 +46,7 @@ StreamArchiver = (function(superClass) {
   extend(StreamArchiver, superClass);
 
   function StreamArchiver(stream, options1) {
-    var ref, ref1, ref2, ref3, ref4, ref5;
+    var ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7;
     this.stream = stream;
     this.options = options1;
     this.stores = {};
@@ -56,7 +60,11 @@ StreamArchiver = (function(superClass) {
       this.stores.elasticsearch = new ElasticsearchStore(this.stream, this.options.stores.elasticsearch);
       this.transformers.push(new ElasticsearchStoreTransformer(this.stream, this.stores.elasticsearch));
     }
-    if ((ref4 = this.options.stores) != null ? (ref5 = ref4.s3) != null ? ref5.enabled : void 0 : void 0) {
+    if ((ref4 = this.options.stores) != null ? (ref5 = ref4.dynamodb) != null ? ref5.enabled : void 0 : void 0) {
+      this.stores.dynamodb = new DynamoDBStore(this.stream, this.options.stores.dynamodb);
+      this.transformers.push(new DynamoDBStoreTransformer(this.stream, this.stores.dynamodb));
+    }
+    if ((ref6 = this.options.stores) != null ? (ref7 = ref6.s3) != null ? ref7.enabled : void 0 : void 0) {
       this.stores.s3 = new S3Store(this.stream, this.options.stores.s3);
       this.transformers.push(new S3StoreTransformer(this.stream, this.stores.s3));
     }
@@ -99,11 +107,11 @@ StreamArchiver = (function(superClass) {
     })(this));
     this.stream.on('hls_snapshot', (function(_this) {
       return function(snapshot) {
-        var i, len, ref6, results, segment;
-        ref6 = snapshot.segments;
+        var i, len, ref8, results, segment;
+        ref8 = snapshot.segments;
         results = [];
-        for (i = 0, len = ref6.length; i < len; i++) {
-          segment = ref6[i];
+        for (i = 0, len = ref8.length; i < len; i++) {
+          segment = ref8[i];
           results.push(_.first(_this.transformers).write(segment));
         }
         return results;
