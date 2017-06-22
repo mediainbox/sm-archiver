@@ -35,6 +35,11 @@ class DynamoDBStore
     #----------
 
     indexSegment: (segment) ->
+        segment = _.clone segment
+        segment.ts = segment.ts.valueOf()
+        segment.end_ts = segment.end_ts.valueOf()
+        segment.ts_actual = segment.ts_actual.valueOf()
+        segment.end_ts_actual = segment.end_ts_actual.valueOf()
         @indexOne 'segment', segment.id, _.pick(segment, segmentKeys)
 
     #----------
@@ -86,6 +91,12 @@ class DynamoDBStore
 
     getSegment: (id, fields) ->
         @getOne 'segment', id, fields
+            .then (segment) ->
+                segment.ts = moment(segment.ts).toDate()
+                segment.end_ts = moment(segment.end_ts).toDate()
+                segment.ts_actual = moment(segment.ts_actual).toDate()
+                segment.end_ts_actual = moment(segment.end_ts_actual).toDate()
+                segment
 
     #----------
 
@@ -118,6 +129,12 @@ class DynamoDBStore
 
     getSegments: (options, attribute) ->
         @getMany 'segment', options, attribute
+            .each (segment) ->
+                segment.ts = moment(segment.ts).toDate()
+                segment.end_ts = moment(segment.end_ts).toDate()
+                segment.ts_actual = moment(segment.ts_actual).toDate()
+                segment.end_ts_actual = moment(segment.end_ts_actual).toDate()
+                segment
 
     #----------
 

@@ -1,4 +1,4 @@
-var AudioTransformer, DatesTransformer, DynamoDBStore, DynamoDBStoreTransformer, ElasticsearchStore, ElasticsearchStoreTransformer, ExportOutput, HlsOutput, IdTransformer, MemoryStore, MemoryStoreTransformer, PreviewTransformer, QueueMemoryStoreTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, moment, segmentKeys,
+var AudioTransformer, DynamoDBStore, DynamoDBStoreTransformer, ElasticsearchStore, ElasticsearchStoreTransformer, ExportOutput, HlsOutput, IdTransformer, MemoryStore, MemoryStoreTransformer, PreviewTransformer, QueueMemoryStoreTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, moment, segmentKeys,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
@@ -7,8 +7,6 @@ _ = require('underscore');
 moment = require('moment');
 
 IdTransformer = require('./transformers/id');
-
-DatesTransformer = require('./transformers/dates');
 
 AudioTransformer = require('./transformers/audio');
 
@@ -70,7 +68,6 @@ StreamArchiver = (function(superClass) {
       this.stores.s3 = new S3Store(this.stream, this.options.stores.s3);
       this.transformers.push(new S3StoreTransformer(this.stream, this.stores.s3));
     }
-    this.transformers.unshift(new DatesTransformer(this.stream));
     this.transformers.unshift(new IdTransformer(this.stream));
     _.each(this.transformers, (function(_this) {
       return function(transformer, index) {

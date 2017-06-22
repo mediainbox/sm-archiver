@@ -1,7 +1,6 @@
 _ = require 'underscore'
 moment = require 'moment'
 IdTransformer = require './transformers/id'
-DatesTransformer = require './transformers/dates'
 AudioTransformer = require './transformers/audio'
 WaveformTransformer = require './transformers/waveform'
 WavedataTransformer = require './transformers/wavedata'
@@ -57,7 +56,6 @@ class StreamArchiver extends require('events').EventEmitter
             @stores.s3 = new S3Store @stream, @options.stores.s3
             @transformers.push new S3StoreTransformer @stream, @stores.s3
 
-        @transformers.unshift new DatesTransformer @stream
         @transformers.unshift new IdTransformer @stream
 
         _.each @transformers, (transformer, index) =>
