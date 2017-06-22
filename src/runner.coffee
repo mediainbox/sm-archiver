@@ -68,7 +68,7 @@ if config = nconf.get('config') or nconf.get('CONFIG')
     nconf.file file: config
 runner = new Runner nconf.get()
 runner.initialize()
-process.on 'uncaughtException', (err) ->
-    debug err
-    return if "#{err}" is 'Error: got binary data when not reconstructing a packet'
+process.on 'uncaughtException', (error) ->
+    debug error
+    return if "#{error}" is 'Error: got binary data when not reconstructing a packet'
     process.exit 1

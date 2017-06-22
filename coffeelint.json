@@ -50,7 +50,7 @@
     "limitComments": true
   },
   "missing_fat_arrows": {
-    "level": "ignore",
+    "level": "warn",
     "is_strict": false
   },
   "newlines_after_classes": {

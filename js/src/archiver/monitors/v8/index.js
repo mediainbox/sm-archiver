@@ -42,9 +42,11 @@ V8Monitor = (function(superClass) {
       };
     })(this));
     this.graphite.timing(['memory', 'rss'], memory.rss);
-    return _.each(heap, function(value, key) {
-      return this.graphite.timing(['memory', key], heap[key]);
-    }, this);
+    return _.each(heap, (function(_this) {
+      return function(value, key) {
+        return _this.graphite.timing(['memory', key], heap[key]);
+      };
+    })(this));
   };
 
   return V8Monitor;

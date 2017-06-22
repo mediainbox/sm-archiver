@@ -35,7 +35,6 @@ class DynamoDBStore
     #----------
 
     indexSegment: (segment) ->
-        debug _.pick(segment, segmentKeys)
         @indexOne 'segment', segment.id, _.pick(segment, segmentKeys)
 
     #----------
@@ -70,7 +69,7 @@ class DynamoDBStore
 
     updateOne: (type, id, name, value) ->
         debug "Updating #{type} #{id}"
-        @updateItemAsync
+        @updateAsync
             TableName: @table
             Key:
                 type: type,
@@ -96,10 +95,10 @@ class DynamoDBStore
             TableName: @table
             Key:
                 type: type
-                id: id
+                id: Number(id)
             AttributesToGet: fields
         .then (result) ->
-            result._source
+            result.Item
         .catch (error) =>
             debug "GET #{type} Error for #{@stream.key}/#{id}: #{error}"
 
@@ -138,24 +137,27 @@ class DynamoDBStore
         from = @parseId options.from, first
         to = @parseId options.to, last
         debug "Searching #{attribute or type} #{from} -> #{to} from #{@stream.key}"
-        expression = '#I'
+        expression = ''
+        values = {}
         if options.from
-            expression += ' >= :f'
+            expression += '#I >= :f'
+            values[':f'] = from
         if options.from and options.to
             expression += ' AND'
-        if option.to
-            expression += ' < :t'
+        if options.to
+            expression += '#I < :t'
+            values[':t'] = to
         @scanAsync
             TableName: @table
             FilterExpression: expression
             ExpressionAttributeNames:
                 '#I': 'id'
-            ExpressionAttributeValues:
-                ':f': from
-                ':t': to
+            ExpressionAttributeValues: values
         .then (result) ->
             P.map result.Items, (item) ->
                 if attribute then item[attribute] else item
+        .filter (item) ->
+            item
         .catch (error) =>
             debug "SEARCH #{attribute or type} Error for #{@stream.key}: #{error}"
 

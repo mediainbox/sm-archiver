@@ -1,6 +1,7 @@
 _ = require 'underscore'
 moment = require 'moment'
 IdTransformer = require './transformers/id'
+DatesTransformer = require './transformers/dates'
 AudioTransformer = require './transformers/audio'
 WaveformTransformer = require './transformers/waveform'
 WavedataTransformer = require './transformers/wavedata'
@@ -56,6 +57,7 @@ class StreamArchiver extends require('events').EventEmitter
             @stores.s3 = new S3Store @stream, @options.stores.s3
             @transformers.push new S3StoreTransformer @stream, @stores.s3
 
+        @transformers.unshift new DatesTransformer @stream
         @transformers.unshift new IdTransformer @stream
 
         _.each @transformers, (transformer, index) =>
@@ -88,15 +90,22 @@ class StreamArchiver extends require('events').EventEmitter
     getSegments: (options, callback) ->
         @getSegmentsFromMemory options, (error, segments) =>
             return callback error, segments if error or (segments and segments.length)
-            @getSegmentsFromElasticsearch options, null, (error, segments) ->
-                return callback error, segments if error or (segments and segments.length)
-                return callback null, []
+            @getSegmentsFromStore options, callback
 
     #----------
 
     getSegmentsFromMemory: (options, callback) ->
         return callback() if not @stores.memory
         callback null, @stores.memory.getSegments(options)
+
+    #----------
+
+    getSegmentsFromStore: (options, callback) ->
+        @getSegmentsFromElasticsearch options, null, (error, segments) =>
+            return callback error, segments if error or (segments and segments.length)
+            @getSegmentsFromDynamoDB options, null, (error, segments) ->
+                return callback error, segments if error or (segments and segments.length)
+                return callback null, []
 
     #----------
 
@@ -108,11 +117,23 @@ class StreamArchiver extends require('events').EventEmitter
 
     #----------
 
+    getSegmentsFromDynamoDB: (options, attribute, callback) ->
+        return callback() if not @stores.dynamodb
+        @stores.dynamodb.getSegments(options, attribute)
+            .then((segments) -> return callback null, segments)
+            .catch(() -> callback())
+
+    #----------
+
     getSegment: (id, callback) ->
         @getSegmentFromMemory id, (error, segment) =>
-            return callback error, (_.pick(segment, segmentKeys.concat(['waveform'])) if segment) if error or segment
-            @getSegmentFromElasticsearch id, (error, segment) ->
+            if error or segment
                 return callback error, (_.pick(segment, segmentKeys.concat(['waveform'])) if segment)
+            @getSegmentFromElasticsearch id, (error, segment) =>
+                if error or segment
+                    return callback error, (_.pick(segment, segmentKeys.concat(['waveform'])) if segment)
+                @getSegmentFromDynamoDB id, (error, segment) ->
+                    return callback error, (_.pick(segment, segmentKeys.concat(['waveform'])) if segment)
 
     #----------
 
@@ -125,8 +146,16 @@ class StreamArchiver extends require('events').EventEmitter
     getSegmentFromElasticsearch: (id, callback) ->
         return callback() if not @stores.elasticsearch
         @stores.elasticsearch.getSegment(id)
-        .then((segment) -> return callback null, segment)
-        .catch(() -> callback())
+            .then((segment) -> return callback null, segment)
+            .catch(() -> callback())
+
+    #----------
+
+    getSegmentFromDynamoDB: (id, callback) ->
+        return callback() if not @stores.dynamodb
+        @stores.dynamodb.getSegment(id)
+            .then((segment) -> return callback null, segment)
+            .catch(() -> callback())
 
     #----------
 
@@ -153,8 +182,8 @@ class StreamArchiver extends require('events').EventEmitter
         _.each segments, (segment) ->
             try
                 wavedataTransformer.write segment
-            catch e
-                debug e
+            catch error
+                debug error
         previewTransformer.end()
 
     #----------
@@ -162,7 +191,9 @@ class StreamArchiver extends require('events').EventEmitter
     getWaveform: (id, callback) ->
         @getWaveformFromMemory id, (error, waveform) =>
             return callback error, waveform if error or waveform
-            @getWaveformFromElasticsearch id, callback
+            @getWaveformFromElasticsearch id, (error, waveform) =>
+                return callback error, waveform if error or waveform
+                @getWaveformFromDynamoDB id, callback
 
     #----------
 
@@ -174,8 +205,16 @@ class StreamArchiver extends require('events').EventEmitter
 
     getWaveformFromElasticsearch: (id, callback) ->
         return callback() if not @stores.elasticsearch
-        @stores.elasticsearch.getSegment(id) \
-            .then((segment) -> return callback null, segment?.waveform) \
+        @stores.elasticsearch.getSegment(id)
+            .then((segment) -> return callback null, segment?.waveform)
+            .catch(() -> callback())
+
+    #----------
+
+    getWaveformFromDynamoDB: (id, callback) ->
+        return callback() if not @stores.dynamodb
+        @stores.dynamodb.getSegment(id)
+            .then((segment) -> return callback null, segment?.waveform)
             .catch(() -> callback())
 
     #----------
@@ -221,7 +260,7 @@ class StreamArchiver extends require('events').EventEmitter
 
     getAudiosFromS3: (options, callback) ->
         return callback() if not @stores.s3
-        @getSegmentsFromElasticsearch options, null, (error, segments) =>
+        @getSegmentsFromStore options, (error, segments) =>
             return callback error, [] if error or not segments or not segments.length
             @stores.s3.getAudiosBySegments(segments)
                 .then((audios) -> return callback null, audios)
@@ -230,9 +269,11 @@ class StreamArchiver extends require('events').EventEmitter
     #----------
 
     getComment: (id, callback) ->
-        @getCommentFromMemory id, (error, comment) ->
+        @getCommentFromMemory id, (error, comment) =>
             return callback error, comment if error or comment
-        @getCommentFromElasticsearch id, callback
+            @getCommentFromElasticsearch id, (error, comment) =>
+                return callback error, comment if error or comment
+                @getCommentFromDynamoDB id, callback
 
     #----------
 
@@ -244,31 +285,51 @@ class StreamArchiver extends require('events').EventEmitter
 
     getCommentFromElasticsearch: (id, callback) ->
         return callback() if not @stores.elasticsearch
-        @stores.elasticsearch.getSegment(id) \
-        .then((segment) -> return callback null, segment?.comment) \
-        .catch(() -> callback())
+        @stores.elasticsearch.getSegment(id)
+            .then((segment) -> return callback null, segment?.comment)
+            .catch(() -> callback())
+
+    #----------
+
+    getCommentFromDynamoDB: (id, callback) ->
+        return callback() if not @stores.dynamodb
+        @stores.dynamodb.getSegment(id)
+            .then((segment) -> return callback null, segment?.comment)
+            .catch(() -> callback())
 
     #----------
 
     getComments: (options, callback) ->
-        @getCommentsFromElasticsearch options, (error, comments) ->
+        @getCommentsFromElasticsearch options, (error, comments) =>
             return callback error, comments if error or (comments and comments.length)
-            return callback null, []
+            @getCommentsFromDynamoDB options, (error, comments) ->
+                return callback error, comments if error or (comments and comments.length)
+                return callback null, []
 
     #----------
 
     getCommentsFromElasticsearch: (options, callback) ->
         return callback() if not @stores.elasticsearch
-        @stores.elasticsearch.getComments(options) \
-        .then((comments) -> callback null, comments)
-        .catch callback
+        @stores.elasticsearch.getComments(options)
+            .then((comments) -> callback null, comments)
+            .catch callback
+
+    #----------
+
+    getCommentsFromDynamoDB: (options, callback) ->
+        return callback() if not @stores.dynamodb
+        @stores.dynamodb.getComments(options)
+            .then((comments) -> callback null, comments)
+            .catch callback
 
     #----------
 
     saveComment: (comment, callback) ->
         @saveCommentToMemory comment, (error, comment) =>
             return callback error, comment if error
-            @saveCommentToElasticsearch comment, callback
+            @saveCommentToElasticsearch comment, (error, comment) =>
+                return callback error, comment if error
+                @saveCommentToDynamoDB comment, callback
 
     #----------
 
@@ -281,9 +342,17 @@ class StreamArchiver extends require('events').EventEmitter
 
     saveCommentToElasticsearch: (comment, callback) ->
         return callback null, comment if not @stores.elasticsearch
-        @stores.elasticsearch.indexComment(comment) \
-        .then(() -> callback null, comment)
-        .catch callback
+        @stores.elasticsearch.indexComment(comment)
+            .then(() -> callback null, comment)
+            .catch callback
+
+    #----------
+
+    saveCommentToDynamoDB: (comment, callback) ->
+        return callback null, comment if not @stores.dynamodb
+        @stores.dynamodb.indexComment(comment)
+            .then(() -> callback null, comment)
+            .catch callback
 
     #----------
 
@@ -320,7 +389,9 @@ class StreamArchiver extends require('events').EventEmitter
             return callback error, exp if error or not exp or not exp.length
             @saveExportToS3 exp, (error, exp) =>
                 return callback error, exp if error
-                @saveExportToElasticsearch exp, callback
+                @saveExportToElasticsearch exp, (error, exp) =>
+                    return callback error, exp if error
+                    @saveExportToDynamoDB exp, callback
 
     #----------
 
@@ -335,6 +406,14 @@ class StreamArchiver extends require('events').EventEmitter
     saveExportToElasticsearch: (exp, callback) ->
         return callback null, exp if not @stores.elasticsearch
         @stores.elasticsearch.indexExport(exp)
+            .then(() -> callback null, exp)
+            .catch callback
+
+    #----------
+
+    saveExportToDynamoDB: (exp, callback) ->
+        return callback null, exp if not @stores.dynamodb
+        @stores.dynamodb.indexExport(exp)
             .then(() -> callback null, exp)
             .catch callback
 
@@ -377,15 +456,25 @@ class StreamArchiver extends require('events').EventEmitter
     #----------
 
     getExports: (options, callback) ->
-        @getExportsFromElasticsearch options, (error, exports) ->
+        @getExportsFromElasticsearch options, (error, exports) =>
             return callback error, exports if error or (exports and exports.length)
-            return callback null, []
+            @getExportsFromDynamoDB options, (error, exports) ->
+                return callback error, exports if error or (exports and exports.length)
+                return callback null, []
 
     #----------
 
     getExportsFromElasticsearch: (options, callback) ->
         return callback() if not @stores.elasticsearch
-        @stores.elasticsearch.getExports(options) \
+        @stores.elasticsearch.getExports(options)
+            .then((exports) -> callback null, exports)
+            .catch callback
+
+    #----------
+
+    getExportsFromDynamoDB: (options, callback) ->
+        return callback() if not @stores.dynamodb
+        @stores.dynamodb.getExports(options)
             .then((exports) -> callback null, exports)
             .catch callback
 

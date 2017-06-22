@@ -1,4 +1,4 @@
-var AudioTransformer, DynamoDBStore, DynamoDBStoreTransformer, ElasticsearchStore, ElasticsearchStoreTransformer, ExportOutput, HlsOutput, IdTransformer, MemoryStore, MemoryStoreTransformer, PreviewTransformer, QueueMemoryStoreTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, moment, segmentKeys,
+var AudioTransformer, DatesTransformer, DynamoDBStore, DynamoDBStoreTransformer, ElasticsearchStore, ElasticsearchStoreTransformer, ExportOutput, HlsOutput, IdTransformer, MemoryStore, MemoryStoreTransformer, PreviewTransformer, QueueMemoryStoreTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, moment, segmentKeys,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
@@ -7,6 +7,8 @@ _ = require('underscore');
 moment = require('moment');
 
 IdTransformer = require('./transformers/id');
+
+DatesTransformer = require('./transformers/dates');
 
 AudioTransformer = require('./transformers/audio');
 
@@ -68,6 +70,7 @@ StreamArchiver = (function(superClass) {
       this.stores.s3 = new S3Store(this.stream, this.options.stores.s3);
       this.transformers.push(new S3StoreTransformer(this.stream, this.stores.s3));
     }
+    this.transformers.unshift(new DatesTransformer(this.stream));
     this.transformers.unshift(new IdTransformer(this.stream));
     _.each(this.transformers, (function(_this) {
       return function(transformer, index) {
@@ -126,12 +129,7 @@ StreamArchiver = (function(superClass) {
         if (error || (segments && segments.length)) {
           return callback(error, segments);
         }
-        return _this.getSegmentsFromElasticsearch(options, null, function(error, segments) {
-          if (error || (segments && segments.length)) {
-            return callback(error, segments);
-          }
-          return callback(null, []);
-        });
+        return _this.getSegmentsFromStore(options, callback);
       };
     })(this));
   };
@@ -141,6 +139,22 @@ StreamArchiver = (function(superClass) {
       return callback();
     }
     return callback(null, this.stores.memory.getSegments(options));
+  };
+
+  StreamArchiver.prototype.getSegmentsFromStore = function(options, callback) {
+    return this.getSegmentsFromElasticsearch(options, null, (function(_this) {
+      return function(error, segments) {
+        if (error || (segments && segments.length)) {
+          return callback(error, segments);
+        }
+        return _this.getSegmentsFromDynamoDB(options, null, function(error, segments) {
+          if (error || (segments && segments.length)) {
+            return callback(error, segments);
+          }
+          return callback(null, []);
+        });
+      };
+    })(this));
   };
 
   StreamArchiver.prototype.getSegmentsFromElasticsearch = function(options, attribute, callback) {
@@ -154,6 +168,17 @@ StreamArchiver = (function(superClass) {
     });
   };
 
+  StreamArchiver.prototype.getSegmentsFromDynamoDB = function(options, attribute, callback) {
+    if (!this.stores.dynamodb) {
+      return callback();
+    }
+    return this.stores.dynamodb.getSegments(options, attribute).then(function(segments) {
+      return callback(null, segments);
+    })["catch"](function() {
+      return callback();
+    });
+  };
+
   StreamArchiver.prototype.getSegment = function(id, callback) {
     return this.getSegmentFromMemory(id, (function(_this) {
       return function(error, segment) {
@@ -161,7 +186,12 @@ StreamArchiver = (function(superClass) {
           return callback(error, (segment ? _.pick(segment, segmentKeys.concat(['waveform'])) : void 0));
         }
         return _this.getSegmentFromElasticsearch(id, function(error, segment) {
-          return callback(error, (segment ? _.pick(segment, segmentKeys.concat(['waveform'])) : void 0));
+          if (error || segment) {
+            return callback(error, (segment ? _.pick(segment, segmentKeys.concat(['waveform'])) : void 0));
+          }
+          return _this.getSegmentFromDynamoDB(id, function(error, segment) {
+            return callback(error, (segment ? _.pick(segment, segmentKeys.concat(['waveform'])) : void 0));
+          });
         });
       };
     })(this));
@@ -179,6 +209,17 @@ StreamArchiver = (function(superClass) {
       return callback();
     }
     return this.stores.elasticsearch.getSegment(id).then(function(segment) {
+      return callback(null, segment);
+    })["catch"](function() {
+      return callback();
+    });
+  };
+
+  StreamArchiver.prototype.getSegmentFromDynamoDB = function(id, callback) {
+    if (!this.stores.dynamodb) {
+      return callback();
+    }
+    return this.stores.dynamodb.getSegment(id).then(function(segment) {
       return callback(null, segment);
     })["catch"](function() {
       return callback();
@@ -222,12 +263,12 @@ StreamArchiver = (function(superClass) {
       return callback(null, preview);
     });
     _.each(segments, function(segment) {
-      var e, error1;
+      var error, error1;
       try {
         return wavedataTransformer.write(segment);
       } catch (error1) {
-        e = error1;
-        return debug(e);
+        error = error1;
+        return debug(error);
       }
     });
     return previewTransformer.end();
@@ -239,7 +280,12 @@ StreamArchiver = (function(superClass) {
         if (error || waveform) {
           return callback(error, waveform);
         }
-        return _this.getWaveformFromElasticsearch(id, callback);
+        return _this.getWaveformFromElasticsearch(id, function(error, waveform) {
+          if (error || waveform) {
+            return callback(error, waveform);
+          }
+          return _this.getWaveformFromDynamoDB(id, callback);
+        });
       };
     })(this));
   };
@@ -256,6 +302,17 @@ StreamArchiver = (function(superClass) {
       return callback();
     }
     return this.stores.elasticsearch.getSegment(id).then(function(segment) {
+      return callback(null, segment != null ? segment.waveform : void 0);
+    })["catch"](function() {
+      return callback();
+    });
+  };
+
+  StreamArchiver.prototype.getWaveformFromDynamoDB = function(id, callback) {
+    if (!this.stores.dynamodb) {
+      return callback();
+    }
+    return this.stores.dynamodb.getSegment(id).then(function(segment) {
       return callback(null, segment != null ? segment.waveform : void 0);
     })["catch"](function() {
       return callback();
@@ -323,7 +380,7 @@ StreamArchiver = (function(superClass) {
     if (!this.stores.s3) {
       return callback();
     }
-    return this.getSegmentsFromElasticsearch(options, null, (function(_this) {
+    return this.getSegmentsFromStore(options, (function(_this) {
       return function(error, segments) {
         if (error || !segments || !segments.length) {
           return callback(error, []);
@@ -338,12 +395,19 @@ StreamArchiver = (function(superClass) {
   };
 
   StreamArchiver.prototype.getComment = function(id, callback) {
-    this.getCommentFromMemory(id, function(error, comment) {
-      if (error || comment) {
-        return callback(error, comment);
-      }
-    });
-    return this.getCommentFromElasticsearch(id, callback);
+    return this.getCommentFromMemory(id, (function(_this) {
+      return function(error, comment) {
+        if (error || comment) {
+          return callback(error, comment);
+        }
+        return _this.getCommentFromElasticsearch(id, function(error, comment) {
+          if (error || comment) {
+            return callback(error, comment);
+          }
+          return _this.getCommentFromDynamoDB(id, callback);
+        });
+      };
+    })(this));
   };
 
   StreamArchiver.prototype.getCommentFromMemory = function(id, callback) {
@@ -364,13 +428,31 @@ StreamArchiver = (function(superClass) {
     });
   };
 
-  StreamArchiver.prototype.getComments = function(options, callback) {
-    return this.getCommentsFromElasticsearch(options, function(error, comments) {
-      if (error || (comments && comments.length)) {
-        return callback(error, comments);
-      }
-      return callback(null, []);
+  StreamArchiver.prototype.getCommentFromDynamoDB = function(id, callback) {
+    if (!this.stores.dynamodb) {
+      return callback();
+    }
+    return this.stores.dynamodb.getSegment(id).then(function(segment) {
+      return callback(null, segment != null ? segment.comment : void 0);
+    })["catch"](function() {
+      return callback();
     });
+  };
+
+  StreamArchiver.prototype.getComments = function(options, callback) {
+    return this.getCommentsFromElasticsearch(options, (function(_this) {
+      return function(error, comments) {
+        if (error || (comments && comments.length)) {
+          return callback(error, comments);
+        }
+        return _this.getCommentsFromDynamoDB(options, function(error, comments) {
+          if (error || (comments && comments.length)) {
+            return callback(error, comments);
+          }
+          return callback(null, []);
+        });
+      };
+    })(this));
   };
 
   StreamArchiver.prototype.getCommentsFromElasticsearch = function(options, callback) {
@@ -382,13 +464,27 @@ StreamArchiver = (function(superClass) {
     })["catch"](callback);
   };
 
+  StreamArchiver.prototype.getCommentsFromDynamoDB = function(options, callback) {
+    if (!this.stores.dynamodb) {
+      return callback();
+    }
+    return this.stores.dynamodb.getComments(options).then(function(comments) {
+      return callback(null, comments);
+    })["catch"](callback);
+  };
+
   StreamArchiver.prototype.saveComment = function(comment, callback) {
     return this.saveCommentToMemory(comment, (function(_this) {
       return function(error, comment) {
         if (error) {
           return callback(error, comment);
         }
-        return _this.saveCommentToElasticsearch(comment, callback);
+        return _this.saveCommentToElasticsearch(comment, function(error, comment) {
+          if (error) {
+            return callback(error, comment);
+          }
+          return _this.saveCommentToDynamoDB(comment, callback);
+        });
       };
     })(this));
   };
@@ -406,6 +502,15 @@ StreamArchiver = (function(superClass) {
       return callback(null, comment);
     }
     return this.stores.elasticsearch.indexComment(comment).then(function() {
+      return callback(null, comment);
+    })["catch"](callback);
+  };
+
+  StreamArchiver.prototype.saveCommentToDynamoDB = function(comment, callback) {
+    if (!this.stores.dynamodb) {
+      return callback(null, comment);
+    }
+    return this.stores.dynamodb.indexComment(comment).then(function() {
       return callback(null, comment);
     })["catch"](callback);
   };
@@ -457,7 +562,12 @@ StreamArchiver = (function(superClass) {
           if (error) {
             return callback(error, exp);
           }
-          return _this.saveExportToElasticsearch(exp, callback);
+          return _this.saveExportToElasticsearch(exp, function(error, exp) {
+            if (error) {
+              return callback(error, exp);
+            }
+            return _this.saveExportToDynamoDB(exp, callback);
+          });
         });
       };
     })(this));
@@ -477,6 +587,15 @@ StreamArchiver = (function(superClass) {
       return callback(null, exp);
     }
     return this.stores.elasticsearch.indexExport(exp).then(function() {
+      return callback(null, exp);
+    })["catch"](callback);
+  };
+
+  StreamArchiver.prototype.saveExportToDynamoDB = function(exp, callback) {
+    if (!this.stores.dynamodb) {
+      return callback(null, exp);
+    }
+    return this.stores.dynamodb.indexExport(exp).then(function() {
       return callback(null, exp);
     })["catch"](callback);
   };
@@ -524,12 +643,19 @@ StreamArchiver = (function(superClass) {
   };
 
   StreamArchiver.prototype.getExports = function(options, callback) {
-    return this.getExportsFromElasticsearch(options, function(error, exports) {
-      if (error || (exports && exports.length)) {
-        return callback(error, exports);
-      }
-      return callback(null, []);
-    });
+    return this.getExportsFromElasticsearch(options, (function(_this) {
+      return function(error, exports) {
+        if (error || (exports && exports.length)) {
+          return callback(error, exports);
+        }
+        return _this.getExportsFromDynamoDB(options, function(error, exports) {
+          if (error || (exports && exports.length)) {
+            return callback(error, exports);
+          }
+          return callback(null, []);
+        });
+      };
+    })(this));
   };
 
   StreamArchiver.prototype.getExportsFromElasticsearch = function(options, callback) {
@@ -537,6 +663,15 @@ StreamArchiver = (function(superClass) {
       return callback();
     }
     return this.stores.elasticsearch.getExports(options).then(function(exports) {
+      return callback(null, exports);
+    })["catch"](callback);
+  };
+
+  StreamArchiver.prototype.getExportsFromDynamoDB = function(options, callback) {
+    if (!this.stores.dynamodb) {
+      return callback();
+    }
+    return this.stores.dynamodb.getExports(options).then(function(exports) {
       return callback(null, exports);
     })["catch"](callback);
   };

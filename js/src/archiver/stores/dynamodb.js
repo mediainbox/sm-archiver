@@ -28,7 +28,6 @@ DynamoDBStore = (function() {
   }
 
   DynamoDBStore.prototype.indexSegment = function(segment) {
-    debug(_.pick(segment, segmentKeys));
     return this.indexOne('segment', segment.id, _.pick(segment, segmentKeys));
   };
 
@@ -61,7 +60,7 @@ DynamoDBStore = (function() {
 
   DynamoDBStore.prototype.updateOne = function(type, id, name, value) {
     debug("Updating " + type + " " + id);
-    return this.updateItemAsync({
+    return this.updateAsync({
       TableName: this.table,
       Key: {
         type: type,
@@ -91,11 +90,11 @@ DynamoDBStore = (function() {
       TableName: this.table,
       Key: {
         type: type,
-        id: id
+        id: Number(id)
       },
       AttributesToGet: fields
     }).then(function(result) {
-      return result._source;
+      return result.Item;
     })["catch"]((function(_this) {
       return function(error) {
         return debug("GET " + type + " Error for " + _this.stream.key + "/" + id + ": " + error);
@@ -131,21 +130,24 @@ DynamoDBStore = (function() {
   };
 
   DynamoDBStore.prototype.getMany = function(type, options, attribute) {
-    var expression, first, from, last, to;
+    var expression, first, from, last, to, values;
     first = moment().subtract(this.hours, 'hours').valueOf();
     last = moment().valueOf();
     from = this.parseId(options.from, first);
     to = this.parseId(options.to, last);
     debug("Searching " + (attribute || type) + " " + from + " -> " + to + " from " + this.stream.key);
-    expression = '#I';
+    expression = '';
+    values = {};
     if (options.from) {
-      expression += ' >= :f';
+      expression += '#I >= :f';
+      values[':f'] = from;
     }
     if (options.from && options.to) {
       expression += ' AND';
     }
-    if (option.to) {
-      expression += ' < :t';
+    if (options.to) {
+      expression += '#I < :t';
+      values[':t'] = to;
     }
     return this.scanAsync({
       TableName: this.table,
@@ -153,10 +155,7 @@ DynamoDBStore = (function() {
       ExpressionAttributeNames: {
         '#I': 'id'
       },
-      ExpressionAttributeValues: {
-        ':f': from,
-        ':t': to
-      }
+      ExpressionAttributeValues: values
     }).then(function(result) {
       return P.map(result.Items, function(item) {
         if (attribute) {
@@ -165,6 +164,8 @@ DynamoDBStore = (function() {
           return item;
         }
       });
+    }).filter(function(item) {
+      return item;
     })["catch"]((function(_this) {
       return function(error) {
         return debug("SEARCH " + (attribute || type) + " Error for " + _this.stream.key + ": " + error);

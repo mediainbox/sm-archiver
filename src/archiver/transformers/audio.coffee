@@ -1,12 +1,13 @@
 _ = require 'underscore'
+moment = require 'moment'
 debug = require('debug') 'sm:archiver:transformers:audio'
 
-PTS_TAG = new Buffer(Number("0x#{s}") for s in '
+PTS_TAG = new Buffer(Number("0x#{s}") for s in '''
     49 44 33 04 00 00 00 00 00 3F 50 52 49 56 00 00 00 35 00 00 63 6F 6D
     2E 61 70 70 6C 65 2E 73 74 72 65 61 6D 69 6E 67 2E 74 72 61 6E 73 70
     6F 72 74 53 74 72 65 61 6D 54 69 6D 65 73 74 61 6D 70 00 00 00 00 00
     00 00 00 00
-    '.split(/\s+/))
+    '''.split(/\s+/))
 
 class AudioTransformer extends require('stream').Transform
     constructor: (@stream) ->
@@ -16,9 +17,10 @@ class AudioTransformer extends require('stream').Transform
     #----------
 
     _transform: (segment, encoding, callback) ->
-        duration = @stream.secsToOffset segment.duration / 1000
         debug "Segment #{segment.id} from #{@stream.key}"
-        @stream._rbuffer.range segment.ts, duration, (error, chunks) =>
+        duration = @stream.secsToOffset segment.duration / 1000
+        ts = if segment.ts instanceof moment then segment.ts else moment(segment.ts)
+        @stream._rbuffer.range ts, duration, (error, chunks) =>
             if error
                 console.error "Error getting segment rewind: #{error}"
                 callback()

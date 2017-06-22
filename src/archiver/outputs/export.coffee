@@ -21,7 +21,7 @@ class ExportOutput
 
     append: (audios) ->
         return @ if not audios.length or @ended
-        _.each audios, (audio) ->
+        _.each audios, (audio) =>
             return if @length is @max
             if not @length
                 @first = audio
@@ -29,7 +29,6 @@ class ExportOutput
             @length++
             @size += audio.length
             @last = audio
-        , @
         debug "Current length for #{@stream.key} is #{@length}"
         @
 
@@ -50,9 +49,8 @@ class ExportOutput
 
     pipe: (to) ->
         @passThrough.pipe to
-        _.each @audios, (audio) ->
+        _.each @audios, (audio) =>
             @passThrough.write audio
-        , @
         @
 
     #----------

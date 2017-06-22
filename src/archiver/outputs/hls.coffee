@@ -19,13 +19,12 @@ class HlsOutput
         if not @length
             @mediaSequence _.first(segments).id
             @comment 'EXT-X-INDEPENDENT-SEGMENTS'
-        _.each segments, (segment) ->
+        _.each segments, (segment) =>
             return if @length is @max
-            ts = if moment.isMoment segment.ts then segment.ts else moment(segment.ts)
+            ts = if segment.ts instanceof moment then segment.ts else moment(segment.ts)
             @programDateTime ts.format()
             @file "/#{@stream.key}/ts/#{segment.id}.#{@stream.opts.format}", segment.duration / 1000
             @length++
-        , @
         debug "Current length for #{@stream.key} is #{@length}"
         @
 

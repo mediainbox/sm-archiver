@@ -93,9 +93,9 @@ runner = new Runner(nconf.get());
 
 runner.initialize();
 
-process.on('uncaughtException', function(err) {
-  debug(err);
-  if (("" + err) === 'Error: got binary data when not reconstructing a packet') {
+process.on('uncaughtException', function(error) {
+  debug(error);
+  if (("" + error) === 'Error: got binary data when not reconstructing a packet') {
     return;
   }
   return process.exit(1);

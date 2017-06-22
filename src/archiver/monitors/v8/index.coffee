@@ -29,9 +29,8 @@ class V8Monitor extends Monitor
             @graphite.timing ['eventloop', 'latency'], time.tupleToNanoseconds(diff)
 
         @graphite.timing ['memory', 'rss'], memory.rss
-        _.each heap, (value, key) ->
+        _.each heap, (value, key) =>
             @graphite.timing ['memory', key], heap[key]
-        , @
 
     #----------
 
