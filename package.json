@@ -45,14 +45,18 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "./runner-cmd",
-    "start:debug": "grunt; DEBUG='sm:archiver*' ./runner-cmd",
+    "start:debug": "grunt; DEBUG='sm:archiver*' npm run start",
     "docker": "docker run -ti --rm -v $PWD:/data -p 9001:9001 sm-archiver",
     "docker:start": "npm run docker -- npm start",
     "docker:start:debug": "npm run docker -- npm run start:debug",
-    "docker:start:debug:testing": "npm run docker:start:debug -- -- --config config/testing.json",
+    "docker:start:debug:testing": "npm run docker:start:debug -- -- -- --config config/testing.json",
     "docker:build": "docker build -t 'sm-archiver' .",
     "compile:v8": "cd src/archiver/monitors/v8 && node-gyp rebuild && cd ../../../..",
-    "docker:compile:v8": "npm run docker -- npm run compile:v8"
+    "docker:compile:v8": "npm run docker -- npm run compile:v8",
+    "migrate": "./migrator-cmd",
+    "migrate:debug": "grunt; DEBUG='sm:migrator*' npm run migrate",
+    "docker:migrate:debug": "npm run docker -- npm run migrate:debug",
+    "docker:migrate:debug:testing": "npm run docker:migrate:debug -- -- -- --config config/testing.json"
   },
   "bin": {
     "sm-archiver": "./runner-cmd"
