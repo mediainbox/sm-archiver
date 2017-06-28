@@ -20,12 +20,52 @@ DynamoDBStore = (function() {
   function DynamoDBStore(stream, options1) {
     this.stream = stream;
     this.options = options1;
+    this.db = new AWS.DynamoDB(this.options);
     _.extend(this, new AWS.DynamoDB.DocumentClient(this.options));
+    P.promisifyAll(this.db);
     P.promisifyAll(this);
-    this.table = "sm-archiver-" + this.stream.key;
+    this.createTable();
     this.hours = this.options.size / 60 / 6;
     debug("Created for " + this.stream.key);
   }
+
+  DynamoDBStore.prototype.createTable = function() {
+    this.table = "sm-archiver-" + this.stream.key;
+    debug("Creating table " + this.table);
+    return this.db.createTableAsync({
+      TableName: this.table,
+      KeySchema: [
+        {
+          AttributeName: 'type',
+          KeyType: 'HASH'
+        }, {
+          AttributeName: 'id',
+          KeyType: 'RANGE'
+        }
+      ],
+      AttributeDefinitions: [
+        {
+          AttributeName: 'type',
+          AttributeType: 'S'
+        }, {
+          AttributeName: 'id',
+          AttributeType: 'N'
+        }
+      ],
+      ProvisionedThroughput: {
+        ReadCapacityUnits: 5,
+        WriteCapacityUnits: 1
+      }
+    }).then((function(_this) {
+      return function() {
+        return debug("CREATED table " + _this.table);
+      };
+    })(this))["catch"]((function(_this) {
+      return function(error) {
+        return debug("CREATE table Error for " + _this.table + ": " + error);
+      };
+    })(this));
+  };
 
   DynamoDBStore.prototype.indexSegment = function(segment) {
     segment = _.clone(segment);

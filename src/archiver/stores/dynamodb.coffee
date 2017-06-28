@@ -26,11 +26,46 @@ exportKeys = [
 
 class DynamoDBStore
     constructor: (@stream, @options) ->
+        @db = new AWS.DynamoDB(@options)
         _.extend @, new AWS.DynamoDB.DocumentClient(@options)
+        P.promisifyAll @db
         P.promisifyAll @
-        @table = "sm-archiver-#{@stream.key}"
+        @createTable()
         @hours = @options.size / 60 / 6
         debug "Created for #{@stream.key}"
+
+    #----------
+
+    createTable: () ->
+        @table = "sm-archiver-#{@stream.key}"
+        debug "Creating table #{@table}"
+        @db.createTableAsync
+            TableName: @table
+            KeySchema: [
+                {
+                    AttributeName: 'type'
+                    KeyType: 'HASH'
+                }, {
+                    AttributeName: 'id'
+                    KeyType: 'RANGE'
+                },
+            ]
+            AttributeDefinitions: [
+                {
+                    AttributeName: 'type'
+                    AttributeType: 'S'
+                }, {
+                    AttributeName: 'id'
+                    AttributeType: 'N'
+                }
+            ]
+            ProvisionedThroughput:
+                ReadCapacityUnits: 5
+                WriteCapacityUnits: 1
+        .then () =>
+            debug "CREATED table #{@table}"
+        .catch (error) =>
+            debug "CREATE table Error for #{@table}: #{error}"
 
     #----------
 

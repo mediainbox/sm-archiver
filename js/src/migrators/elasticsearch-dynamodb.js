@@ -16,17 +16,60 @@ ElasticsearchToDynamoDBMigrator = (function() {
   function ElasticsearchToDynamoDBMigrator(options) {
     this.options = options;
     this.elasticsearch = new elasticsearch.Client(_.clone(this.options.elasticsearch));
+    this.db = new AWS.DynamoDB(this.options.dynamodb);
     this.dynamodb = new AWS.DynamoDB.DocumentClient(this.options.dynamodb);
+    P.promisifyAll(this.db);
     P.promisifyAll(this.dynamodb);
     debug('Created');
   }
 
   ElasticsearchToDynamoDBMigrator.prototype.initialize = function() {
-    debug('Starting to migrate segments');
-    return this.migrate('segment').then((function(_this) {
+    return this.createTable().then((function(_this) {
+      return function() {
+        debug('Starting to migrate segments');
+        return _this.migrate('segment');
+      };
+    })(this)).then((function(_this) {
       return function() {
         debug('Starting to migrate exports');
         return _this.migrate('export');
+      };
+    })(this));
+  };
+
+  ElasticsearchToDynamoDBMigrator.prototype.createTable = function() {
+    debug("Creating table " + this.options.dynamodb.table);
+    return this.db.createTableAsync({
+      TableName: this.options.dynamodb.table,
+      KeySchema: [
+        {
+          AttributeName: 'type',
+          KeyType: 'HASH'
+        }, {
+          AttributeName: 'id',
+          KeyType: 'RANGE'
+        }
+      ],
+      AttributeDefinitions: [
+        {
+          AttributeName: 'type',
+          AttributeType: 'S'
+        }, {
+          AttributeName: 'id',
+          AttributeType: 'N'
+        }
+      ],
+      ProvisionedThroughput: {
+        ReadCapacityUnits: 5,
+        WriteCapacityUnits: 1
+      }
+    }).then((function(_this) {
+      return function() {
+        return debug("CREATED table " + _this.options.dynamodb.table);
+      };
+    })(this))["catch"]((function(_this) {
+      return function(error) {
+        return debug("CREATE table Error for " + _this.options.dynamodb.table + ": " + error);
       };
     })(this));
   };
@@ -41,11 +84,11 @@ ElasticsearchToDynamoDBMigrator = (function() {
     }).then((function(_this) {
       return function(results) {
         var ref, ref1;
-        debug("Parsing " + results.length + "  " + type + "s " + ((ref = _.first(results)) != null ? ref.id : void 0) + " to " + ((ref1 = _.last(results)) != null ? ref1.id : void 0));
+        debug("Parsing " + results.length + " " + type + "s " + ((ref = _.first(results)) != null ? ref.id : void 0) + " to " + ((ref1 = _.last(results)) != null ? ref1.id : void 0));
         return _this.parse(type, results).then(function(parsedResults) {
           var ref2, ref3, ref4, ref5;
-          debug("Parsed " + results.length + "  " + type + "s " + ((ref2 = _.first(results)) != null ? ref2.id : void 0) + " to " + ((ref3 = _.last(results)) != null ? ref3.id : void 0));
-          debug("Writing " + results.length + "  " + type + "s " + ((ref4 = _.first(results)) != null ? ref4.id : void 0) + " to " + ((ref5 = _.last(results)) != null ? ref5.id : void 0));
+          debug("Parsed " + results.length + " " + type + "s " + ((ref2 = _.first(results)) != null ? ref2.id : void 0) + " to " + ((ref3 = _.last(results)) != null ? ref3.id : void 0));
+          debug("Writing " + results.length + " " + type + "s " + ((ref4 = _.first(results)) != null ? ref4.id : void 0) + " to " + ((ref5 = _.last(results)) != null ? ref5.id : void 0));
           return _this.write(parsedResults);
         })["return"](results);
       };
@@ -118,8 +161,6 @@ ElasticsearchToDynamoDBMigrator = (function() {
         obj["" + this.options.dynamodb.table] = results,
         obj
       )
-    }).then(function() {
-      return debug;
     });
   };
 

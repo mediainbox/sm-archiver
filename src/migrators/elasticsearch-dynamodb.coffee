@@ -8,18 +8,54 @@ debug = require('debug') 'sm:migrators:elasticsearch-dynamodb'
 class ElasticsearchToDynamoDBMigrator
     constructor: (@options) ->
         @elasticsearch = new elasticsearch.Client _.clone @options.elasticsearch
+        @db = new AWS.DynamoDB @options.dynamodb
         @dynamodb = new AWS.DynamoDB.DocumentClient @options.dynamodb
+        P.promisifyAll @db
         P.promisifyAll @dynamodb
         debug 'Created'
 
     #----------
 
     initialize: () ->
-        debug 'Starting to migrate segments'
-        @migrate 'segment'
+        @createTable()
+        .then () =>
+            debug 'Starting to migrate segments'
+            @migrate 'segment'
         .then () =>
             debug 'Starting to migrate exports'
             @migrate 'export'
+
+    #----------
+
+    createTable: () ->
+        debug "Creating table #{@options.dynamodb.table}"
+        @db.createTableAsync
+            TableName: @options.dynamodb.table
+            KeySchema: [
+                {
+                    AttributeName: 'type'
+                    KeyType: 'HASH'
+                }, {
+                    AttributeName: 'id'
+                    KeyType: 'RANGE'
+                },
+            ]
+            AttributeDefinitions: [
+                {
+                    AttributeName: 'type'
+                    AttributeType: 'S'
+                }, {
+                    AttributeName: 'id'
+                    AttributeType: 'N'
+                }
+            ]
+            ProvisionedThroughput:
+                ReadCapacityUnits: 5
+                WriteCapacityUnits: 1
+        .then () =>
+            debug "CREATED table #{@options.dynamodb.table}"
+        .catch (error) =>
+            debug "CREATE table Error for #{@options.dynamodb.table}: #{error}"
 
     #----------
 
