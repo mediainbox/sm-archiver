@@ -1,10 +1,10 @@
-waveform    = require "sm-waveform"
-PassThrough = require("stream").PassThrough
-debug = require("debug") "sm:archiver:transformers:waveform"
+waveform    = require 'sm-waveform'
+PassThrough = require('stream').PassThrough
+debug = require('debug') 'sm:archiver:transformers:waveform'
 
-class WaveformTransformer extends require("stream").Transform
+class WaveformTransformer extends require('stream').Transform
     constructor: (@stream, @pps) ->
-        super objectMode:true
+        super objectMode: true
         debug "Created for #{@stream.key}"
 
     #----------

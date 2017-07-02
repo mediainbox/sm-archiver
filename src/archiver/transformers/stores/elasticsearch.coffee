@@ -1,6 +1,6 @@
-debug = require("debug") "sm:archiver:transformers:elasticsearch"
+debug = require('debug') 'sm:archiver:transformers:elasticsearch'
 
-class ElasticsearchStoreTransformer extends require("stream").Transform
+class ElasticsearchStoreTransformer extends require('stream').Transform
     constructor: (@stream, @elasticsearch) ->
         super objectMode: true
         debug "Created for #{@stream.key}"

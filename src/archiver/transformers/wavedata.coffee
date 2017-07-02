@@ -1,7 +1,7 @@
-WaveformData = require "waveform-data"
-debug = require("debug") "sm:archiver:transformers:wavedata"
+WaveformData = require 'waveform-data'
+debug = require('debug') 'sm:archiver:transformers:wavedata'
 
-class WavedataTransformer extends require("stream").Transform
+class WavedataTransformer extends require('stream').Transform
     constructor: (@stream) ->
         super objectMode: true
         debug "Created for #{@stream.key}"

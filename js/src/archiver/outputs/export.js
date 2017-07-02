@@ -1,13 +1,13 @@
 var ExportOutput, PassThrough, _, debug, moment,
   bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
 
-_ = require("underscore");
+_ = require('underscore');
 
-moment = require("moment");
+moment = require('moment');
 
-PassThrough = require("stream").PassThrough;
+PassThrough = require('stream').PassThrough;
 
-debug = require("debug")("sm:archiver:outputs:export");
+debug = require('debug')('sm:archiver:outputs:export');
 
 ExportOutput = (function() {
   function ExportOutput(stream, options) {
@@ -23,7 +23,7 @@ ExportOutput = (function() {
     this.size = 0;
     this.format = this.stream.opts.format;
     this.filename = this.stream.key + "-" + this.id + "." + this.format;
-    this.passThrough.on("end", this.onEnd);
+    this.passThrough.on('end', this.onEnd);
     _.extend(this, options);
     debug("Created for " + this.stream.key);
   }
@@ -32,18 +32,20 @@ ExportOutput = (function() {
     if (!audios.length || this.ended) {
       return this;
     }
-    _.each(audios, function(audio) {
-      if (this.length === this.max) {
-        return;
-      }
-      if (!this.length) {
-        this.first = audio;
-      }
-      this.audios.push(audio);
-      this.length++;
-      this.size += audio.length;
-      return this.last = audio;
-    }, this);
+    _.each(audios, (function(_this) {
+      return function(audio) {
+        if (_this.length === _this.max) {
+          return;
+        }
+        if (!_this.length) {
+          _this.first = audio;
+        }
+        _this.audios.push(audio);
+        _this.length++;
+        _this.size += audio.length;
+        return _this.last = audio;
+      };
+    })(this));
     debug("Current length for " + this.stream.key + " is " + this.length);
     return this;
   };
@@ -65,9 +67,11 @@ ExportOutput = (function() {
 
   ExportOutput.prototype.pipe = function(to) {
     this.passThrough.pipe(to);
-    _.each(this.audios, function(audio) {
-      return this.passThrough.write(audio);
-    }, this);
+    _.each(this.audios, (function(_this) {
+      return function(audio) {
+        return _this.passThrough.write(audio);
+      };
+    })(this));
     return this;
   };
 

@@ -1,6 +1,6 @@
-_ = require "underscore"
-moment = require "moment"
-debug = require("debug") "sm:archiver:stores:memory"
+_ = require 'underscore'
+moment = require 'moment'
+debug = require('debug') 'sm:archiver:stores:memory'
 R_TIMESTAMP = /^[1-9][0-9]*$/
 
 class MemoryStore
@@ -27,7 +27,7 @@ class MemoryStore
         debug "Storing segment #{segment.id} from #{@stream.key}"
         @segments[segment.id] = segment
         @index.push segment.id
-        delete @queue[segment.id];
+        delete @queue[segment.id]
         if @index.length > @options.size
             @expire()
         debug "#{@index.length} segments in memory from #{@stream.key}"
@@ -54,22 +54,22 @@ class MemoryStore
     #----------
 
     getWaveform: (id) ->
-        @getOne id, "waveform"
+        @getOne id, 'waveform'
 
     #----------
 
     getAudio: (id) ->
-        @getOne id, "audio"
+        @getOne id, 'audio'
 
     #----------
 
     getComment: (id) ->
-        @getOne id, "comment"
+        @getOne id, 'comment'
 
     #----------
 
     getOne: (id, attribute) ->
-        debug "Getting #{attribute or "segment"} #{id} from #{@stream.key}"
+        debug "Getting #{attribute or 'segment'} #{id} from #{@stream.key}"
         if attribute then @segments[id]?[attribute] else @segments[id]
 
     #----------
@@ -80,12 +80,12 @@ class MemoryStore
     #----------
 
     getComments: (options) ->
-        @getMany options, "comment"
+        @getMany options, 'comment'
 
     #----------
 
     getAudios: (options) ->
-        @getMany options, "audio"
+        @getMany options, 'audio'
 
     #----------
 
@@ -94,9 +94,9 @@ class MemoryStore
         last = _.last @index
         from = @parseId options.from, first
         to = @parseId options.to, last
-        debug "Searching #{attribute or "segment"}s #{from} -> #{to} from #{@stream.key}"
+        debug "Searching #{attribute or 'segment'}s #{from} -> #{to} from #{@stream.key}"
         return [] if from < first or to <= first
-        segments = _.values _.pick(@segments, _.filter(@index, (id) => id >= from and id < to))
+        segments = _.values _.pick(@segments, _.filter(@index, (id) -> id >= from and id < to))
         if attribute then _.pluck segments, attribute else segments
 
     #----------

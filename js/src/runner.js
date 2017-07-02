@@ -1,15 +1,15 @@
 var Runner, config, debug, nconf, request, runner;
 
-nconf = require("nconf");
+nconf = require('nconf');
 
-request = require("request");
+request = require('request');
 
-debug = require("debug")("sm:archiver:runner");
+debug = require('debug')('sm:archiver:runner');
 
 Runner = (function() {
   function Runner(config1) {
     this.config = config1;
-    debug("Created");
+    debug('Created');
   }
 
   Runner.prototype.initialize = function() {
@@ -25,7 +25,7 @@ Runner = (function() {
     return request.get(this.config.uri, {
       json: true,
       qs: {
-        ping: "archiver"
+        ping: 'archiver'
       }
     }, (function(_this) {
       return function(error, response, body) {
@@ -34,7 +34,7 @@ Runner = (function() {
           return _this.retry(callback);
         }
         if (!body) {
-          debug("No radio available");
+          debug('No radio available');
           return _this.retry(callback);
         }
         return callback(body);
@@ -45,7 +45,7 @@ Runner = (function() {
   Runner.prototype.retry = function(callback) {
     return setTimeout((function(_this) {
       return function() {
-        debug("Retry");
+        debug('Retry');
         return _this.getRadio(callback);
       };
     })(this), this.config.ping / 2);
@@ -57,17 +57,17 @@ Runner = (function() {
   };
 
   Runner.prototype.getArchiver = function() {
-    this.archiver = this.archiver || require("./archiver");
+    this.archiver = this.archiver || require('./archiver');
     return this.archiver;
   };
 
   Runner.prototype.ping = function() {
     return setTimeout((function(_this) {
       return function() {
-        debug("Ping");
+        debug('Ping');
         return request.put(_this.config.uri, {
           qs: {
-            ping: "archiver",
+            ping: 'archiver',
             name: _this.radio.name
           }
         }, function() {
@@ -83,7 +83,7 @@ Runner = (function() {
 
 nconf.env().argv();
 
-if (config = nconf.get("config") || nconf.get("CONFIG")) {
+if (config = nconf.get('config') || nconf.get('CONFIG')) {
   nconf.file({
     file: config
   });
@@ -93,14 +93,12 @@ runner = new Runner(nconf.get());
 
 runner.initialize();
 
-process.on("uncaughtException", (function(_this) {
-  return function(err) {
-    debug(err);
-    if (("" + err) === "Error: got binary data when not reconstructing a packet") {
-      return;
-    }
-    return process.exit(1);
-  };
-})(this));
+process.on('uncaughtException', function(error) {
+  debug(error);
+  if (("" + error) === 'Error: got binary data when not reconstructing a packet') {
+    return;
+  }
+  return process.exit(1);
+});
 
 //# sourceMappingURL=runner.js.map

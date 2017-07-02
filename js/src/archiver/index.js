@@ -2,17 +2,17 @@ var Archiver, Logger, Monitors, Server, SlaveIO, StreamArchiver, debug,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
-SlaveIO = require("streammachine/js/src/streammachine/slave/slave_io");
+SlaveIO = require('streammachine/js/src/streammachine/slave/slave_io');
 
-Logger = require("streammachine/js/src/streammachine/logger");
+Logger = require('streammachine/js/src/streammachine/logger');
 
-StreamArchiver = require("./stream");
+StreamArchiver = require('./stream');
 
-Server = require("./server");
+Server = require('./server');
 
-Monitors = require("./monitors");
+Monitors = require('./monitors');
 
-debug = require("debug")("sm:archiver");
+debug = require('debug')('sm:archiver');
 
 Archiver = (function(superClass) {
   extend(Archiver, superClass);
@@ -28,19 +28,15 @@ Archiver = (function(superClass) {
       stdout: true
     });
     this.io = new SlaveIO(this, this.log.child({
-      module: "io"
+      module: 'io'
     }), this.options.master);
-    this.io.on("connected", (function(_this) {
-      return function() {
-        return debug("Connected to master");
-      };
-    })(this));
-    this.io.on("disconnected", (function(_this) {
-      return function() {
-        return debug("Disconnected from master");
-      };
-    })(this));
-    this.once("streams", (function(_this) {
+    this.io.on('connected', function() {
+      return debug('Connected to master');
+    });
+    this.io.on('disconnected', function() {
+      return debug('Disconnected from master');
+    });
+    this.once('streams', (function(_this) {
       return function() {
         var key, ref, ref1, results, stream;
         _this._configured = true;
@@ -60,15 +56,15 @@ Archiver = (function(superClass) {
       };
     })(this));
     this.server = new Server(this, this.options, this.log.child({
-      component: "server"
+      component: 'server'
     }));
     this.monitors = new Monitors(this, this.server, this.options);
-    debug("Created");
+    debug('Created');
   }
 
   return Archiver;
 
-})(require("streammachine/js/src/streammachine/slave"));
+})(require('streammachine/js/src/streammachine/slave'));
 
 module.exports = Archiver;
 

@@ -1,20 +1,20 @@
 var ElasticsearchStore, P, R_TIMESTAMP, _, debug, elasticsearch, exportKeys, moment, segmentKeys;
 
-P = require("bluebird");
+P = require('bluebird');
 
-_ = require("underscore");
+_ = require('underscore');
 
-moment = require("moment");
+moment = require('moment');
 
-elasticsearch = require("elasticsearch");
+elasticsearch = require('elasticsearch');
 
-debug = require("debug")("sm:archiver:stores:elasticsearch");
+debug = require('debug')('sm:archiver:stores:elasticsearch');
 
 R_TIMESTAMP = /^[1-9][0-9]*$/;
 
-segmentKeys = ["id", "ts", "end_ts", "ts_actual", "end_ts_actual", "data_length", "duration", "discontinuitySeq", "pts", "waveform", "comment"];
+segmentKeys = ['id', 'ts', 'end_ts', 'ts_actual', 'end_ts_actual', 'data_length', 'duration', 'discontinuitySeq', 'pts', 'waveform', 'comment'];
 
-exportKeys = ["id", "format", "to", "from"];
+exportKeys = ['id', 'format', 'to', 'from'];
 
 ElasticsearchStore = (function() {
   function ElasticsearchStore(stream, options) {
@@ -26,21 +26,21 @@ ElasticsearchStore = (function() {
   }
 
   ElasticsearchStore.prototype.indexSegment = function(segment) {
-    return this.indexOne("segment", segment.id, _.pick(segment, segmentKeys));
+    return this.indexOne('segment', segment.id, _.pick(segment, segmentKeys));
   };
 
   ElasticsearchStore.prototype.indexComment = function(comment) {
-    return this.updateOne("segment", comment.id, {
+    return this.updateOne('segment', comment.id, {
       comment: comment
     });
   };
 
   ElasticsearchStore.prototype.indexExport = function(exp) {
-    return this.indexOne("export", exp.id, _.pick(exp, exportKeys));
+    return this.indexOne('export', exp.id, _.pick(exp, exportKeys));
   };
 
   ElasticsearchStore.prototype.deleteExport = function(id) {
-    return this.deleteOne("export", id);
+    return this.deleteOne('export', id);
   };
 
   ElasticsearchStore.prototype.indexOne = function(type, id, body) {
@@ -74,7 +74,7 @@ ElasticsearchStore = (function() {
   };
 
   ElasticsearchStore.prototype.getSegment = function(id, fields) {
-    return this.getOne("segment", id, fields);
+    return this.getOne('segment', id, fields);
   };
 
   ElasticsearchStore.prototype.getOne = function(type, id, fields) {
@@ -84,11 +84,9 @@ ElasticsearchStore = (function() {
       type: type,
       id: id,
       fields: fields
-    }).then((function(_this) {
-      return function(result) {
-        return result._source;
-      };
-    })(this))["catch"]((function(_this) {
+    }).then(function(result) {
+      return result._source;
+    })["catch"]((function(_this) {
       return function(error) {
         return debug("GET " + type + " Error for " + _this.stream.key + "/" + id + ": " + error);
       };
@@ -109,15 +107,15 @@ ElasticsearchStore = (function() {
   };
 
   ElasticsearchStore.prototype.getSegments = function(options, attribute) {
-    return this.getMany("segment", options, attribute);
+    return this.getMany('segment', options, attribute);
   };
 
   ElasticsearchStore.prototype.getComments = function(options) {
-    return this.getMany("segment", options, "comment");
+    return this.getMany('segment', options, 'comment');
   };
 
   ElasticsearchStore.prototype.getExports = function(options) {
-    return this.getMany("export", options);
+    return this.getMany('export', options);
   };
 
   ElasticsearchStore.prototype.getMany = function(type, options, attribute) {
@@ -145,21 +143,19 @@ ElasticsearchStore = (function() {
       type: type,
       body: {
         size: this.options.size,
-        sort: "id",
+        sort: 'id',
         query: query
       }
-    }).then((function(_this) {
-      return function(result) {
-        return P.map(result.hits.hits, function(hit) {
-          var ref;
-          if (attribute) {
-            return (ref = hit._source) != null ? ref[attribute] : void 0;
-          } else {
-            return hit._source;
-          }
-        });
-      };
-    })(this))["catch"]((function(_this) {
+    }).then(function(result) {
+      return P.map(result.hits.hits, function(hit) {
+        var ref;
+        if (attribute) {
+          return (ref = hit._source) != null ? ref[attribute] : void 0;
+        } else {
+          return hit._source;
+        }
+      });
+    })["catch"]((function(_this) {
       return function(error) {
         return debug("SEARCH " + (attribute || type) + " Error for " + _this.stream.key + ": " + error);
       };

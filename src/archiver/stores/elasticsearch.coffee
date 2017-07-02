@@ -1,27 +1,27 @@
-P = require "bluebird"
-_ = require "underscore"
-moment = require "moment"
-elasticsearch = require "elasticsearch"
-debug = require("debug") "sm:archiver:stores:elasticsearch"
+P = require 'bluebird'
+_ = require 'underscore'
+moment = require 'moment'
+elasticsearch = require 'elasticsearch'
+debug = require('debug') 'sm:archiver:stores:elasticsearch'
 R_TIMESTAMP = /^[1-9][0-9]*$/
 segmentKeys = [
-    "id",
-    "ts",
-    "end_ts",
-    "ts_actual",
-    "end_ts_actual",
-    "data_length",
-    "duration",
-    "discontinuitySeq",
-    "pts",
-    "waveform",
-    "comment"
+    'id',
+    'ts',
+    'end_ts',
+    'ts_actual',
+    'end_ts_actual',
+    'data_length',
+    'duration',
+    'discontinuitySeq',
+    'pts',
+    'waveform',
+    'comment'
 ]
 exportKeys = [
-    "id",
-    "format",
-    "to",
-    "from"
+    'id',
+    'format',
+    'to',
+    'from'
 ]
 
 class ElasticsearchStore
@@ -34,22 +34,22 @@ class ElasticsearchStore
     #----------
 
     indexSegment: (segment) ->
-        @indexOne "segment", segment.id, _.pick(segment, segmentKeys)
+        @indexOne 'segment', segment.id, _.pick(segment, segmentKeys)
 
     #----------
 
     indexComment: (comment) ->
-        @updateOne "segment", comment.id, comment: comment
+        @updateOne 'segment', comment.id, comment: comment
 
     #----------
 
     indexExport: (exp) ->
-        @indexOne "export", exp.id, _.pick(exp, exportKeys)
+        @indexOne 'export', exp.id, _.pick(exp, exportKeys)
 
     #----------
 
     deleteExport: (id) ->
-        @deleteOne "export", id
+        @deleteOne 'export', id
 
     #----------
 
@@ -70,14 +70,14 @@ class ElasticsearchStore
     #----------
 
     getSegment: (id, fields) ->
-        @getOne "segment", id, fields
+        @getOne 'segment', id, fields
 
     #----------
 
     getOne: (type, id, fields) ->
         debug "Getting #{type} #{id} from #{@stream.key}"
         @get(index: @stream.key, type: type, id: id, fields: fields)
-            .then((result) => result._source )
+            .then((result) -> result._source )
             .catch (error) =>
                 debug "GET #{type} Error for #{@stream.key}/#{id}: #{error}"
 
@@ -92,17 +92,17 @@ class ElasticsearchStore
     #----------
 
     getSegments: (options, attribute) ->
-        @getMany "segment", options, attribute
+        @getMany 'segment', options, attribute
 
     #----------
 
     getComments: (options) ->
-        @getMany "segment", options, "comment"
+        @getMany 'segment', options, 'comment'
 
     #----------
 
     getExports: (options) ->
-        @getMany "export", options
+        @getMany 'export', options
 
     #----------
 
@@ -126,11 +126,11 @@ class ElasticsearchStore
             delete query.range.id.gte
         @search(index: @stream.key, type: type, body: {
             size: @options.size,
-            sort: "id",
+            sort: 'id',
             query: query
         })
-        .then((result) =>
-            P.map(result.hits.hits, (hit) =>
+        .then((result) ->
+            P.map(result.hits.hits, (hit) ->
                 if attribute then hit._source?[attribute] else hit._source
             )
         )

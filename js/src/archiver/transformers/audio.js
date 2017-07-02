@@ -1,14 +1,16 @@
-var AudioTransformer, PTS_TAG, _, debug, s,
+var AudioTransformer, PTS_TAG, _, debug, moment, s,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
-_ = require("underscore");
+_ = require('underscore');
 
-debug = require("debug")("sm:archiver:transformers:audio");
+moment = require('moment');
+
+debug = require('debug')('sm:archiver:transformers:audio');
 
 PTS_TAG = new Buffer((function() {
   var i, len, ref, results;
-  ref = "49 44 33 04 00 00 00 00 00 3F 50 52 49 56 00 00 00 35 00 00 63 6F 6D\n2E 61 70 70 6C 65 2E 73 74 72 65 61 6D 69 6E 67 2E 74 72 61 6E 73 70\n6F 72 74 53 74 72 65 61 6D 54 69 6D 65 73 74 61 6D 70 00 00 00 00 00\n00 00 00 00".split(/\s+/);
+  ref = '49 44 33 04 00 00 00 00 00 3F 50 52 49 56 00 00 00 35 00 00 63 6F 6D\n2E 61 70 70 6C 65 2E 73 74 72 65 61 6D 69 6E 67 2E 74 72 61 6E 73 70\n6F 72 74 53 74 72 65 61 6D 54 69 6D 65 73 74 61 6D 70 00 00 00 00 00\n00 00 00 00'.split(/\s+/);
   results = [];
   for (i = 0, len = ref.length; i < len; i++) {
     s = ref[i];
@@ -29,10 +31,11 @@ AudioTransformer = (function(superClass) {
   }
 
   AudioTransformer.prototype._transform = function(segment, encoding, callback) {
-    var duration;
-    duration = this.stream.secsToOffset(segment.duration / 1000);
+    var duration, ts;
     debug("Segment " + segment.id + " from " + this.stream.key);
-    return this.stream._rbuffer.range(segment.ts, duration, (function(_this) {
+    duration = this.stream.secsToOffset(segment.duration / 1000);
+    ts = segment.ts instanceof moment ? segment.ts : moment(segment.ts);
+    return this.stream._rbuffer.range(ts, duration, (function(_this) {
       return function(error, chunks) {
         var audio, buffers, chunk, i, len, length, meta, tag;
         if (error) {
@@ -80,7 +83,7 @@ AudioTransformer = (function(superClass) {
 
   return AudioTransformer;
 
-})(require("stream").Transform);
+})(require('stream').Transform);
 
 module.exports = AudioTransformer;
 

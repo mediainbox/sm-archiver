@@ -1,20 +1,20 @@
-_ = require "underscore"
-P = require "bluebird"
-Client = require "node-statsd"
-debug = require("debug") "sm:archiver:monitors:graphite"
+_ = require 'underscore'
+P = require 'bluebird'
+Client = require 'node-statsd'
+debug = require('debug') 'sm:archiver:monitors:graphite'
 
-HOSTNAME = require("os").hostname()
-PLACEHOLDER = "<<separator>>"
+HOSTNAME = require('os').hostname()
+PLACEHOLDER = '<<separator>>'
 DEFAULT_INCREMENT = 1
-TAGS_SEPARATOR = ","
-SEPARATOR = "."
-EXTREME = ""
-SPACE = "_"
-SLASH = "."
-DOT = "+"
+TAGS_SEPARATOR = ','
+SEPARATOR = '.'
+EXTREME = ''
+SPACE = '_'
+SLASH = '.'
+DOT = '+'
 
-rSeparator = new RegExp(PLACEHOLDER, "g")
-rSpace = new RegExp(" ", "g")
+rSeparator = new RegExp(PLACEHOLDER, 'g')
+rSpace = new RegExp(' ', 'g')
 rDotsExt = /(^\.|\.$)/g
 rSlash = /\//g
 rDots = /\.+/g
@@ -34,32 +34,32 @@ class Graphite
         @TAGS_SEPARATOR = TAGS_SEPARATOR
 
     timing: (name, value, sampleRate, tags) ->
-        @send "timing", name, value,
+        @send 'timing', name, value,
             sampleRate: sampleRate,
             tags: tags
 
     increment: (name, value, sampleRate, tags) ->
-        @send "increment", name, value || DEFAULT_INCREMENT,
+        @send 'increment', name, value or DEFAULT_INCREMENT,
             sampleRate: sampleRate,
             tags: tags
 
     decrement: (name, value, sampleRate, tags) ->
-        @send "decrement", name, value or DEFAULT_INCREMENT,
+        @send 'decrement', name, value or DEFAULT_INCREMENT,
             sampleRate: sampleRate,
             tags: tags
 
     histogram: (name, value, sampleRate, tags) ->
-        @send "histogram", name, value,
+        @send 'histogram', name, value,
             sampleRate: sampleRate,
             tags: tags
 
     gauge: (name, value, sampleRate, tags) ->
-        @send "gauge", name, value,
+        @send 'gauge', name, value,
             sampleRate: sampleRate,
             tags: tags
 
     unique: (name, value, sampleRate, tags) ->
-        @send "unique", name, value,
+        @send 'unique', name, value,
             sampleRate: sampleRate,
             tags: tags
 
@@ -69,7 +69,7 @@ class Graphite
             tags: tags
 
     send: (method, metric, value, options) ->
-        options = _.defaults options || {},
+        options = _.defaults options or {},
             sampleRate: 1,
             tags: []
         metric = @stringify metric

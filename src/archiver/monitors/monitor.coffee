@@ -1,4 +1,4 @@
-INTERVAL = 10000;
+INTERVAL = 10000
 
 class Monitor
     constructor: (options) ->
@@ -10,4 +10,6 @@ class Monitor
 
     check: ->
 
-module.exports = Monitor;
+#----------
+
+module.exports = Monitor

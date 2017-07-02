@@ -1,12 +1,12 @@
 var HlsOutput, _, debug, m3u, moment;
 
-m3u = require("m3u");
+m3u = require('m3u');
 
-_ = require("underscore");
+_ = require('underscore');
 
-moment = require("moment");
+moment = require('moment');
 
-debug = require("debug")("sm:archiver:outputs:hls");
+debug = require('debug')('sm:archiver:outputs:hls');
 
 HlsOutput = (function() {
   function HlsOutput(stream) {
@@ -25,18 +25,20 @@ HlsOutput = (function() {
     }
     if (!this.length) {
       this.mediaSequence(_.first(segments).id);
-      this.comment("EXT-X-INDEPENDENT-SEGMENTS");
+      this.comment('EXT-X-INDEPENDENT-SEGMENTS');
     }
-    _.each(segments, function(segment) {
-      var ts;
-      if (this.length === this.max) {
-        return;
-      }
-      ts = moment.isMoment(segment.ts) ? segment.ts : moment(segment.ts);
-      this.programDateTime(ts.format());
-      this.file("/" + this.stream.key + "/ts/" + segment.id + "." + this.stream.opts.format, segment.duration / 1000);
-      return this.length++;
-    }, this);
+    _.each(segments, (function(_this) {
+      return function(segment) {
+        var ts;
+        if (_this.length === _this.max) {
+          return;
+        }
+        ts = segment.ts instanceof moment ? segment.ts : moment(segment.ts);
+        _this.programDateTime(ts.format());
+        _this.file("/" + _this.stream.key + "/ts/" + segment.id + "." + _this.stream.opts.format, segment.duration / 1000);
+        return _this.length++;
+      };
+    })(this));
     debug("Current length for " + this.stream.key + " is " + this.length);
     return this;
   };

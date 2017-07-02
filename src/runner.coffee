@@ -1,10 +1,10 @@
-nconf = require "nconf"
-request = require "request"
-debug = require("debug") "sm:archiver:runner"
+nconf = require 'nconf'
+request = require 'request'
+debug = require('debug') 'sm:archiver:runner'
 
 class Runner
     constructor: (@config) ->
-        debug "Created"
+        debug 'Created'
 
     #----------
 
@@ -18,13 +18,13 @@ class Runner
     getRadio: (callback) ->
         request.get(@config.uri,
             json: true,
-            qs: ping: "archiver"
+            qs: ping: 'archiver'
         , (error, response, body) =>
             if error
                 debug error
                 return @retry callback
             if not body
-                debug "No radio available"
+                debug 'No radio available'
                 return @retry callback
             callback body
         )
@@ -33,7 +33,7 @@ class Runner
 
     retry: (callback) ->
         setTimeout () =>
-            debug "Retry"
+            debug 'Retry'
             @getRadio callback
         , @config.ping / 2
 
@@ -45,16 +45,16 @@ class Runner
     #----------
 
     getArchiver: () ->
-        @archiver = @archiver or require "./archiver"
+        @archiver = @archiver or require './archiver'
         @archiver
 
     #----------
 
     ping: () ->
         setTimeout () =>
-            debug "Ping"
+            debug 'Ping'
             request.put @config.uri,
-                qs: ping: "archiver", name: @radio.name
+                qs: ping: 'archiver', name: @radio.name
             , () =>
                 @ping()
         , @config.ping
@@ -64,11 +64,11 @@ class Runner
 #----------
 
 nconf.env().argv()
-if config = nconf.get("config") || nconf.get("CONFIG")
+if config = nconf.get('config') or nconf.get('CONFIG')
     nconf.file file: config
 runner = new Runner nconf.get()
 runner.initialize()
-process.on "uncaughtException", (err) =>
-    debug err
-    return if "#{err}" == "Error: got binary data when not reconstructing a packet"
+process.on 'uncaughtException', (error) ->
+    debug error
+    return if "#{error}" is 'Error: got binary data when not reconstructing a packet'
     process.exit 1

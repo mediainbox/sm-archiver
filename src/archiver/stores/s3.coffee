@@ -1,12 +1,12 @@
-P = require "bluebird"
-AWS = require "aws-sdk"
-_ = require "underscore"
-moment = require "moment"
-debug = require("debug") "sm:archiver:stores:s3"
+P = require 'bluebird'
+AWS = require 'aws-sdk'
+_ = require 'underscore'
+moment = require 'moment'
+debug = require('debug') 'sm:archiver:stores:s3'
 
 class S3Store
     constructor: (@stream, @options) ->
-        _.extend(@, new AWS.S3 @options)
+        _.extend @, new AWS.S3(@options)
         P.promisifyAll @
         @prefix = "sm-archiver/#{@stream.key}"
         @format = @stream.opts.format
@@ -15,15 +15,15 @@ class S3Store
     #----------
 
     getAudioById: (id, format) =>
-        return P.resolve() if format and format != @format
+        return P.resolve() if format and format isnt @format
         @getFile("audio/#{id}.#{format or @format}") \
-            .then (data) => data.Body
+            .then (data) -> data.Body
 
     #----------
 
     getAudiosByIds: (ids) ->
         return P.map(
-            ids, (id) => @getAudioById(id).catch(->)
+            ids, (id) => @getAudioById(id).catch( -> )
         )
         .filter (audio) -> audio
 
@@ -43,9 +43,9 @@ class S3Store
     #----------
 
     getExportById: (id, format) =>
-        return P.resolve() if format and format != @format
+        return P.resolve() if format and format isnt @format
         @getFile("exports/#{id}.#{format or @format}") \
-            .then (data) => data.Body
+            .then (data) -> data.Body
 
     #----------
 
@@ -63,7 +63,7 @@ class S3Store
         key = "#{@prefix}/#{key}"
         debug "Getting #{key}"
         @getObjectAsync(Key: key) \
-            .catch (error) =>
+            .catch (error) ->
                 debug "GET Error for #{key}: #{error}"
                 throw error
 
@@ -72,9 +72,9 @@ class S3Store
     putFileIfNotExists: (name, body, options) ->
         key = "#{@prefix}/#{name}"
         @headObjectAsync(Key: key) \
-            .then(() => debug "Skipping #{key}")
+            .then(() -> debug "Skipping #{key}")
             .catch (error) =>
-                if error.statusCode != 404
+                if error.statusCode isnt 404
                     return debug "HEAD Error for #{key}: #{error}"
                 @putFile name, body, options
 
@@ -83,7 +83,7 @@ class S3Store
     putFile: (name, body, options) ->
         key = "#{@prefix}/#{name}"
         debug "Storing #{key}"
-        @putObjectAsync(_.extend({}, options || {}, Key: key, Body: body)) \
+        @putObjectAsync(_.extend({}, options or {}, Key: key, Body: body)) \
             .catch (error) ->
                 debug "PUT Error for #{key}: #{error}"
 
@@ -92,7 +92,7 @@ class S3Store
     deleteFile: (name, options) ->
         key = "#{@prefix}/#{name}"
         debug "Deleting #{key}"
-        @deleteObjectAsync(_.extend({}, options || {}, Key: key)) \
+        @deleteObjectAsync(_.extend({}, options or {}, Key: key)) \
             .catch (error) ->
                 debug "DELETE Error for #{key}: #{error}"
 
