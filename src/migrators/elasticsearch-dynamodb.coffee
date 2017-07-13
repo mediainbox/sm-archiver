@@ -61,23 +61,22 @@ class ElasticsearchToDynamoDBMigrator
 
     migrate: (type, from) ->
         from = from or 0
-        debug "Searching #{type}s from #{from}"
+        @read type, from
+        .then (results) =>
+            @parse type, results
+        .then (results) =>
+            @write type, results
+        .then (results) =>
+            @next type, from, results
+
+    #----------
+
+    read: (type, from) ->
+        debug "Reading #{type}s from #{from}"
         @search type, from
         .then (results) ->
-            debug "Searched #{results.length} #{type}s #{_.first(results)?.id} to #{_.last(results)?.id}"
+            debug "Read #{results.length} #{type}s #{_.first(results)?.id} to #{_.last(results)?.id}"
             results
-        .then (results) =>
-            debug "Parsing #{results.length} #{type}s #{_.first(results)?.id} to #{_.last(results)?.id}"
-            @parse type, results
-            .then (parsedResults) =>
-                debug "Parsed #{results.length} #{type}s #{_.first(results)?.id} to #{_.last(results)?.id}"
-                debug "Writing #{results.length} #{type}s #{_.first(results)?.id} to #{_.last(results)?.id}"
-                @write parsedResults
-            .return results
-        .then (results) =>
-            debug "Wrote #{results.length} #{type}s #{_.first(results)?.id} to #{_.last(results)?.id}"
-            return if results.length < @options.elasticsearch.size
-            @migrate type, from + results.length
 
     #----------
 
@@ -98,8 +97,12 @@ class ElasticsearchToDynamoDBMigrator
     #----------
 
     parse: (type, results) ->
+        debug "Parsing #{results.length} #{type}s #{_.first(results)?.id} to #{_.last(results)?.id}"
         P.map results, (result) =>
             @parseOne type, result
+        .then (parsedResults) ->
+            debug "Parsed #{results.length} #{type}s #{_.first(results)?.id} to #{_.last(results)?.id}"
+            parsedResults
 
     #----------
 
@@ -116,10 +119,40 @@ class ElasticsearchToDynamoDBMigrator
 
     #----------
 
-    write: (results) ->
-        @dynamodb.batchWriteAsync
-            RequestItems:
-                "#{@options.dynamodb.table}": results
+    write: (type, results) ->
+        P.reduce results, (batchedResults, result) =>
+            batch = _.last(batchedResults)
+            if not batch or batch.length is @options.dynamodb.size
+                batch = []
+                batchedResults.push batch
+            batch.push result
+            batchedResults
+        , []
+        .map (batch) =>
+            @writeBatch type, batch
+        .return results
+
+    #----------
+
+    writeBatch: (type, results) ->
+        firstId = _.first(results)?.PutRequest.Item.id
+        lastId = _.last(results)?.PutRequest.Item.id
+        debug "Writing #{results.length} #{type}s #{firstId} to #{lastId}"
+        P.bind(@)
+#        @dynamodb.batchWriteAsync
+#            RequestItems:
+#                "#{@options.dynamodb.table}": results
+        .then () ->
+            debug "Wrote #{results.length} #{type}s #{firstId} to #{lastId}"
+            results
+
+
+
+    #----------
+
+    next: (type, from, results) ->
+        return if results.length < @options.elasticsearch.size
+        @migrate type, from + results.length
 
     #----------
 
