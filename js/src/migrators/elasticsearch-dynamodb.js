@@ -175,11 +175,18 @@ ElasticsearchToDynamoDBMigrator = (function() {
   };
 
   ElasticsearchToDynamoDBMigrator.prototype.writeBatch = function(type, results) {
-    var firstId, lastId, ref, ref1;
+    var firstId, lastId, obj, ref, ref1;
     firstId = (ref = _.first(results)) != null ? ref.PutRequest.Item.id : void 0;
     lastId = (ref1 = _.last(results)) != null ? ref1.PutRequest.Item.id : void 0;
     debug("Writing " + results.length + " " + type + "s " + firstId + " to " + lastId);
-    return P.bind(this).then(function() {
+    P.bind(this);
+    return this.dynamodb.batchWriteAsync({
+      RequestItems: (
+        obj = {},
+        obj["" + this.options.dynamodb.table] = results,
+        obj
+      )
+    }).then(function() {
       debug("Wrote " + results.length + " " + type + "s " + firstId + " to " + lastId);
       return results;
     });

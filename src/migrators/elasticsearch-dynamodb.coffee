@@ -139,9 +139,9 @@ class ElasticsearchToDynamoDBMigrator
         lastId = _.last(results)?.PutRequest.Item.id
         debug "Writing #{results.length} #{type}s #{firstId} to #{lastId}"
         P.bind(@)
-#        @dynamodb.batchWriteAsync
-#            RequestItems:
-#                "#{@options.dynamodb.table}": results
+        @dynamodb.batchWriteAsync
+            RequestItems:
+                "#{@options.dynamodb.table}": results
         .then () ->
             debug "Wrote #{results.length} #{type}s #{firstId} to #{lastId}"
             results
