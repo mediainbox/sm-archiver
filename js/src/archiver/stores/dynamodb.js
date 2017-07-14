@@ -200,7 +200,7 @@ DynamoDBStore = (function() {
       values[':f'] = from;
     }
     if (options.from && options.to) {
-      expression += ' AND';
+      expression += ' AND ';
     }
     if (options.to) {
       expression += '#I < :t';

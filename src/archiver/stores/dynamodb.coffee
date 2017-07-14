@@ -195,7 +195,7 @@ class DynamoDBStore
             expression += '#I >= :f'
             values[':f'] = from
         if options.from and options.to
-            expression += ' AND'
+            expression += ' AND '
         if options.to
             expression += '#I < :t'
             values[':t'] = to
