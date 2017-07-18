@@ -20,12 +20,15 @@ DynamoDBStore = (function() {
   function DynamoDBStore(stream, options1) {
     this.stream = stream;
     this.options = options1;
+    if (this.options.debug) {
+      this.options.logger = console;
+    }
     this.db = new AWS.DynamoDB(this.options);
     _.extend(this, new AWS.DynamoDB.DocumentClient(this.options));
     P.promisifyAll(this.db);
     P.promisifyAll(this);
     this.createTable();
-    this.hours = this.options.size / 60 / 6;
+    this.hours = (this.options.size || 1440) / 60 / 6;
     debug("Created for " + this.stream.key);
   }
 
@@ -187,43 +190,66 @@ DynamoDBStore = (function() {
   };
 
   DynamoDBStore.prototype.getMany = function(type, options, attribute) {
-    var expression, first, from, last, to, values;
-    first = moment().subtract(this.hours, 'hours').valueOf();
-    last = moment().valueOf();
-    from = this.parseId(options.from, first);
-    to = this.parseId(options.to, last);
-    debug("Searching " + (attribute || type) + " " + from + " -> " + to + " from " + this.stream.key);
-    expression = '';
-    values = {};
+    var from, to;
     if (options.from) {
-      expression += '#I >= :f';
-      values[':f'] = from;
+      from = this.parseId(options.from);
+      to = this.parseId(options.to) || moment(from).add(this.hours, 'hours').valueOf();
+    } else if (options.to) {
+      to = this.parseId(options.to);
+      from = this.parseId(options.from) || moment(to).subtract(this.hours, 'hours').valueOf();
+    } else {
+      to = moment().valueOf();
+      from = moment(to).subtract(this.hours, 'hours').valueOf();
     }
-    if (options.from && options.to) {
-      expression += ' AND ';
+    return this.queryManyLoop([], type, attribute, from, to);
+  };
+
+  DynamoDBStore.prototype.queryManyLoop = function(items, type, attribute, from, to, lastEvaluatedKey) {
+    return this.queryMany(type, attribute, from, to, lastEvaluatedKey).then((function(_this) {
+      return function(result) {
+        return P.map(result.Items, function(item) {
+          if (attribute) {
+            return item[attribute];
+          } else {
+            return item;
+          }
+        }).filter(function(item) {
+          return item;
+        }).then(function(results) {
+          items = items.concat(results);
+          if (!result.LastEvaluatedKey) {
+            return items;
+          }
+          return _this.queryManyLoop(items, type, attribute, from, to, result.LastEvaluatedKey);
+        });
+      };
+    })(this));
+  };
+
+  DynamoDBStore.prototype.queryMany = function(type, attribute, from, to, lastEvaluatedKey) {
+    var message, options;
+    message = "Searching " + (attribute || type) + " " + from + " -> " + to + " from " + this.stream.key;
+    if (lastEvaluatedKey) {
+      message += " starting at " + lastEvaluatedKey.id;
     }
-    if (options.to) {
-      expression += '#I < :t';
-      values[':t'] = to;
-    }
-    return this.scanAsync({
+    debug(message);
+    options = {
       TableName: this.table,
-      FilterExpression: expression,
+      KeyConditionExpression: '#T = :type AND #I BETWEEN :from AND :to',
       ExpressionAttributeNames: {
+        '#T': 'type',
         '#I': 'id'
       },
-      ExpressionAttributeValues: values
-    }).then(function(result) {
-      return P.map(result.Items, function(item) {
-        if (attribute) {
-          return item[attribute];
-        } else {
-          return item;
-        }
-      });
-    }).filter(function(item) {
-      return item;
-    })["catch"]((function(_this) {
+      ExpressionAttributeValues: {
+        ':type': type,
+        ':from': from,
+        ':to': to
+      }
+    };
+    if (lastEvaluatedKey) {
+      options.ExclusiveStartKey = lastEvaluatedKey;
+    }
+    return this.queryAsync(options)["catch"]((function(_this) {
       return function(error) {
         return debug("SEARCH " + (attribute || type) + " Error for " + _this.stream.key + ": " + error);
       };

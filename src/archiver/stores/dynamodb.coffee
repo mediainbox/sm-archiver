@@ -26,12 +26,14 @@ exportKeys = [
 
 class DynamoDBStore
     constructor: (@stream, @options) ->
+        if @options.debug
+            @options.logger = console
         @db = new AWS.DynamoDB(@options)
         _.extend @, new AWS.DynamoDB.DocumentClient(@options)
         P.promisifyAll @db
         P.promisifyAll @
         @createTable()
-        @hours = @options.size / 60 / 6
+        @hours = (@options.size or 1440) / 60 / 6
         debug "Created for #{@stream.key}"
 
     #----------
@@ -184,34 +186,53 @@ class DynamoDBStore
     #----------
 
     getMany: (type, options, attribute) ->
-        first = moment().subtract(@hours, 'hours').valueOf()
-        last = moment().valueOf()
-        from = @parseId options.from, first
-        to = @parseId options.to, last
-        debug "Searching #{attribute or type} #{from} -> #{to} from #{@stream.key}"
-        expression = ''
-        values = {}
         if options.from
-            expression += '#I >= :f'
-            values[':f'] = from
-        if options.from and options.to
-            expression += ' AND '
-        if options.to
-            expression += '#I < :t'
-            values[':t'] = to
-        @scanAsync
-            TableName: @table
-            FilterExpression: expression
-            ExpressionAttributeNames:
-                '#I': 'id'
-            ExpressionAttributeValues: values
-        .then (result) ->
+            from = @parseId options.from
+            to = @parseId(options.to) or moment(from).add(@hours, 'hours').valueOf()
+        else if options.to
+            to = @parseId options.to
+            from = @parseId(options.from) or moment(to).subtract(@hours, 'hours').valueOf()
+        else
+            to = moment().valueOf()
+            from = moment(to).subtract(@hours, 'hours').valueOf()
+        @queryManyLoop [], type, attribute, from, to
+
+    #----------
+
+    queryManyLoop: (items, type, attribute, from, to, lastEvaluatedKey) ->
+        @queryMany type, attribute, from, to, lastEvaluatedKey
+        .then (result) =>
             P.map result.Items, (item) ->
                 if attribute then item[attribute] else item
-        .filter (item) ->
-            item
-        .catch (error) =>
-            debug "SEARCH #{attribute or type} Error for #{@stream.key}: #{error}"
+            .filter (item) ->
+                item
+            .then (results) =>
+                items = items.concat results
+                return items if not result.LastEvaluatedKey
+                @queryManyLoop items, type, attribute, from, to, result.LastEvaluatedKey
+
+    #----------
+
+    queryMany: (type, attribute, from, to, lastEvaluatedKey) ->
+        message = "Searching #{attribute or type} #{from} -> #{to} from #{@stream.key}"
+        if lastEvaluatedKey
+            message += " starting at #{lastEvaluatedKey.id}"
+        debug message
+        options =
+            TableName: @table
+            KeyConditionExpression: '#T = :type AND #I BETWEEN :from AND :to'
+            ExpressionAttributeNames:
+                '#T': 'type'
+                '#I': 'id'
+            ExpressionAttributeValues:
+                ':type': type
+                ':from': from
+                ':to': to
+        if lastEvaluatedKey
+            options.ExclusiveStartKey = lastEvaluatedKey
+        @queryAsync options
+            .catch (error) =>
+                debug "SEARCH #{attribute or type} Error for #{@stream.key}: #{error}"
 
     #----------
 
