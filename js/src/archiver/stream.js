@@ -100,6 +100,9 @@ StreamArchiver = (function(superClass) {
     this.stream._once_source_loaded((function(_this) {
       return function() {
         return _this.stream.source.getHLSSnapshot(function(error, snapshot) {
+          if (!snapshot) {
+            return debug("HLS Snapshot failed from initial source load of " + _this.stream.key);
+          }
           debug("HLS snapshot from initial source load of " + _this.stream.key + " (" + snapshot.segments.length + " segments)");
           return _this.stream.emit('hls_snapshot', snapshot);
         });
