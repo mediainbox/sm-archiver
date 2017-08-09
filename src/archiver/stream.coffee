@@ -74,6 +74,7 @@ class StreamArchiver extends require('events').EventEmitter
 
         @stream._once_source_loaded =>
             @stream.source.getHLSSnapshot (error, snapshot) =>
+                return debug "HLS Snapshot failed from initial source load of #{@stream.key}" if not snapshot
                 debug "HLS snapshot from initial source load of #{@stream.key} (#{snapshot.segments.length} segments)"
                 @stream.emit 'hls_snapshot', snapshot
 
