@@ -1,4 +1,4 @@
-var CACHE, CACHE_HEADER, NO_CACHE, Server, _, bodyParser, compression, cors, debug, exportKeys, express, moment, onHeaders, sizeof;
+var CACHE, CACHE_30_SECONDS, CACHE_HEADER, NO_CACHE, Server, _, bodyParser, compression, cors, debug, exportKeys, express, moment, onHeaders, sizeof;
 
 cors = require('cors');
 
@@ -23,6 +23,8 @@ exportKeys = ['id', 'format', 'to', 'from'];
 CACHE_HEADER = 'Cache-Control';
 
 CACHE = 'max-age=3600, smax-age=86400';
+
+CACHE_30_SECONDS = 'max-age=30';
 
 NO_CACHE = 'max-age=0, no-cache, must-revalidate';
 
@@ -167,6 +169,36 @@ Server = (function() {
         } else {
           res.set('X-Archiver-Preview-Length', preview.length);
           res.set(CACHE_HEADER, NO_CACHE);
+          return res.json(preview);
+        }
+      });
+    });
+    this.app.get('/:stream/preview-last-hour', function(req, res) {
+      var previewParams;
+      previewParams = {
+        from: moment().subtract(1, 'hours').valueOf(),
+        to: moment().valueOf()
+      };
+      if (!req.stream.archiver) {
+        return res.status(404).json({
+          status: 404,
+          error: 'Stream not archived'
+        });
+      }
+      return req.stream.archiver.getPreview(previewParams, function(error, preview) {
+        if (error) {
+          return res.status(500).json({
+            status: 500,
+            error: (error != null ? error.stack : void 0) || error
+          });
+        } else if (!preview) {
+          return res.status(404).json({
+            status: 404,
+            error: 'Preview not found'
+          });
+        } else {
+          res.set('X-Archiver-Preview-Length', preview.length);
+          res.set(CACHE_HEADER, CACHE_30_SECONDS);
           return res.json(preview);
         }
       });

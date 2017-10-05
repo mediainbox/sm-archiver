@@ -15,6 +15,7 @@ exportKeys = [
 ]
 CACHE_HEADER = 'Cache-Control'
 CACHE = 'max-age=3600, smax-age=86400'
+CACHE_30_SECONDS = 'max-age=30'
 NO_CACHE = 'max-age=0, no-cache, must-revalidate'
 
 class Server
@@ -98,6 +99,23 @@ class Server
                 else
                     res.set 'X-Archiver-Preview-Length', preview.length
                     res.set CACHE_HEADER, NO_CACHE
+                    res.json preview
+
+        @app.get '/:stream/preview-last-hour', (req, res) ->
+            previewParams =
+                from: moment().subtract(1, 'hours').valueOf()
+                to: moment().valueOf()
+
+            if not req.stream.archiver
+                return res.status(404).json status: 404, error: 'Stream not archived'
+            req.stream.archiver.getPreview previewParams, (error, preview) ->
+                if error
+                    res.status(500).json status: 500, error: error?.stack or error
+                else if not preview
+                    res.status(404).json status: 404, error: 'Preview not found'
+                else
+                    res.set 'X-Archiver-Preview-Length', preview.length
+                    res.set CACHE_HEADER, CACHE_30_SECONDS
                     res.json preview
 
         @app.get '/:stream/segments/:segment', (req, res) ->
