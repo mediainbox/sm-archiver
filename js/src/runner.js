@@ -1,8 +1,8 @@
 var Runner, config, debug, heapdump, request, runner;
 
-heapdump = require('heapdump');
+require('./gcloud-tools');
 
-require('./tools/stackdriver-debugger');
+heapdump = require('heapdump');
 
 request = require('request');
 
