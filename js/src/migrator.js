@@ -4,6 +4,8 @@ nconf = require('nconf');
 
 debug = require('debug')('sm:migrator');
 
+config = require('./config');
+
 Migrator = (function() {
   function Migrator(config1) {
     this.config = config1;
@@ -29,15 +31,7 @@ Migrator = (function() {
 
 })();
 
-nconf.env().argv();
-
-if (config = nconf.get('config') || nconf.get('CONFIG')) {
-  nconf.file({
-    file: config
-  });
-}
-
-migrator = new Migrator(nconf.get());
+migrator = new Migrator(config);
 
 migrator.initialize();
 
