@@ -56,3 +56,16 @@ While running, StreamMachine Archiver can be found at http://localhost:9000<sup>
 2. Not required if running with Docker.
 3. Not required if running with Docker.
 4. Not required if running locally.
+
+## Google Cloud Stackdriver tools
+
+Required config.json parameters:
+```
+{
+  ...
+  "gCloudProjectId": "project_id",
+  "gCloudKeyFilename": "./config/credentials.json"
+}
+
+```
+See also [https://github.com/GoogleCloudPlatform/cloud-trace-nodejs#running-elsewhere]()

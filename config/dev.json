@@ -1,4 +1,6 @@
 {
   "mode": "master",
-  "uri": "https://vl0b3fvvm5.execute-api.us-east-1.amazonaws.com/prod/index?ping=archiver&name=desa"
+  "uri": "https://vl0b3fvvm5.execute-api.us-east-1.amazonaws.com/prod/index?ping=archiver&name=desa",
+  "gCloudProjectId": "",
+  "gCloudKeyFilename": ""
 }

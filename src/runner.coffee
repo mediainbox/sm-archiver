@@ -1,7 +1,8 @@
+require('./gcloud-tools')
 heapdump = require('heapdump')
-nconf = require 'nconf'
 request = require 'request'
 debug = require('debug') 'sm:archiver:runner'
+config = require('./config')
 
 class Runner
     constructor: (@config) ->
@@ -64,11 +65,10 @@ class Runner
 
 #----------
 
-nconf.env().argv()
-if config = nconf.get('config') or nconf.get('CONFIG')
-    nconf.file file: config
-runner = new Runner nconf.get()
+
+runner = new Runner config
 runner.initialize()
+
 process.on 'uncaughtException', (error) ->
     debug error
     return if "#{error}" is 'Error: got binary data when not reconstructing a packet'

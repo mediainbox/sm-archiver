@@ -1,12 +1,14 @@
-var Runner, config, debug, heapdump, nconf, request, runner;
+var Runner, config, debug, heapdump, request, runner;
+
+require('./gcloud-tools');
 
 heapdump = require('heapdump');
-
-nconf = require('nconf');
 
 request = require('request');
 
 debug = require('debug')('sm:archiver:runner');
+
+config = require('./config');
 
 Runner = (function() {
   function Runner(config1) {
@@ -83,15 +85,7 @@ Runner = (function() {
 
 })();
 
-nconf.env().argv();
-
-if (config = nconf.get('config') || nconf.get('CONFIG')) {
-  nconf.file({
-    file: config
-  });
-}
-
-runner = new Runner(nconf.get());
+runner = new Runner(config);
 
 runner.initialize();
 
