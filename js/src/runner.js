@@ -1,4 +1,6 @@
-var Runner, config, debug, nconf, request, runner;
+var Runner, config, debug, heapdump, nconf, request, runner;
+
+heapdump = require('heapdump');
 
 nconf = require('nconf');
 

@@ -1,3 +1,4 @@
+heapdump = require('heapdump')
 nconf = require 'nconf'
 request = require 'request'
 debug = require('debug') 'sm:archiver:runner'
