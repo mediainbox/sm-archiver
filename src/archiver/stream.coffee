@@ -86,7 +86,15 @@ class StreamArchiver extends require('events').EventEmitter
 
     #----------
 
-    getSegments: (options, callback) ->
+    getSegments: (_options, callback) ->
+        options = _.extend {}, _options
+
+        if options.minutesLength
+            options.to = moment().valueOf()
+            if not options.from
+                options.from = moment().subtract(parseInt(options.minutesLength), 'minutes').valueOf()
+            delete options.minutesLength
+
         @getSegmentsFromMemory options, (error, segments) =>
             return callback error, segments if error or (segments and segments.length)
             @getSegmentsFromStore options, callback
