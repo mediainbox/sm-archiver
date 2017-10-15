@@ -168,7 +168,7 @@ Server = (function() {
           });
         } else {
           res.set('X-Archiver-Preview-Length', preview.length);
-          res.set(CACHE_HEADER, NO_CACHE);
+          res.set(CACHE_HEADER, CACHE_30_SECONDS);
           return res.json(preview);
         }
       });

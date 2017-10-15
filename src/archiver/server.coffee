@@ -98,7 +98,7 @@ class Server
                     res.status(404).json status: 404, error: 'Preview not found'
                 else
                     res.set 'X-Archiver-Preview-Length', preview.length
-                    res.set CACHE_HEADER, NO_CACHE
+                    res.set CACHE_HEADER, CACHE_30_SECONDS
                     res.json preview
 
         @app.get '/:stream/preview-last-hour', (req, res) ->
