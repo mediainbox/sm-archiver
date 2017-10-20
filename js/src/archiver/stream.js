@@ -123,7 +123,16 @@ StreamArchiver = (function(superClass) {
     debug("Created for " + this.stream.key);
   }
 
-  StreamArchiver.prototype.getSegments = function(options, callback) {
+  StreamArchiver.prototype.getSegments = function(_options, callback) {
+    var options;
+    options = _.extend({}, _options);
+    if (options.minutesLength) {
+      options.to = moment().valueOf();
+      if (!options.from) {
+        options.from = moment().subtract(parseInt(options.minutesLength), 'minutes').valueOf();
+      }
+      delete options.minutesLength;
+    }
     return this.getSegmentsFromMemory(options, (function(_this) {
       return function(error, segments) {
         if (error || (segments && segments.length)) {
