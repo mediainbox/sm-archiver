@@ -29,10 +29,11 @@ CACHE_30_SECONDS = 'max-age=30';
 NO_CACHE = 'max-age=0, no-cache, must-revalidate';
 
 Server = (function() {
-  function Server(core, options, log) {
+  function Server(core, options, log, stream) {
     this.core = core;
     this.options = options;
     this.log = log;
+    this.stream = stream;
     this.app = express();
     this.app.set('x-powered-by', 'StreamMachine Archiver');
     this.app.use(cors({
@@ -60,6 +61,11 @@ Server = (function() {
         } else {
           return res.status(404).end('Invalid stream.\n');
         }
+      };
+    })(this));
+    this.app.get('/streams', (function(_this) {
+      return function(req, res) {
+        return res.send(Object.keys(_this.core.streams));
       };
     })(this));
     this.app.get('/:stream.m3u8', compression({

@@ -19,7 +19,7 @@ CACHE_30_SECONDS = 'max-age=30'
 NO_CACHE = 'max-age=0, no-cache, must-revalidate'
 
 class Server
-    constructor: (@core, @options, @log) ->
+    constructor: (@core, @options, @log, @stream) ->
         @app = express()
         @app.set 'x-powered-by', 'StreamMachine Archiver'
         @app.use cors(exposedHeaders: ['X-Archiver-Preview-Length', 'X-Archiver-Filename'])
@@ -42,6 +42,9 @@ class Server
                 next()
             else
                 res.status(404).end 'Invalid stream.\n'
+
+        @app.get '/streams', (req, res) =>
+            res.send(Object.keys(@core.streams))
 
         @app.get '/:stream.m3u8', compression(filter: -> true), (req, res) =>
             if @options.outputs?.live?.enabled and not req.query.from and not req.query.to

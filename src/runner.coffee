@@ -12,7 +12,7 @@ class Runner
 
     initialize: () ->
         @getRadio (radio) =>
-            @ping()
+            #@ping()
             @createArchiver radio
 
     #----------

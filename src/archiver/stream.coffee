@@ -5,11 +5,11 @@ AudioTransformer = require './transformers/audio'
 WaveformTransformer = require './transformers/waveform'
 WavedataTransformer = require './transformers/wavedata'
 PreviewTransformer = require './transformers/preview'
-MemoryStore = require './stores/memory'
-QueueMemoryStoreTransformer = require './transformers/stores/memory/queue'
-MemoryStoreTransformer = require './transformers/stores/memory'
-ElasticsearchStore = require './stores/elasticsearch'
-ElasticsearchStoreTransformer = require './transformers/stores/elasticsearch'
+#MemoryStore = require './stores/memory'
+#QueueMemoryStoreTransformer = require './transformers/stores/memory/queue'
+#MemoryStoreTransformer = require './transformers/stores/memory'
+#ElasticsearchStore = require './stores/elasticsearch'
+#ElasticsearchStoreTransformer = require './transformers/stores/elasticsearch'
 DynamoDBStore = require './stores/dynamodb'
 DynamoDBStoreTransformer = require './transformers/stores/dynamodb'
 S3Store = require './stores/s3'
@@ -39,14 +39,14 @@ class StreamArchiver extends require('events').EventEmitter
             new WaveformTransformer(@stream, @options.pixels_per_second)
         ]
 
-        if @options.stores?.memory?.enabled
-            @stores.memory = new MemoryStore @stream, @options.stores.memory
-            @transformers.unshift new QueueMemoryStoreTransformer @stream, @stores.memory
-            @transformers.push new MemoryStoreTransformer @stream, @stores.memory
+#        if @options.stores?.memory?.enabled
+#            @stores.memory = new MemoryStore @stream, @options.stores.memory
+#            @transformers.unshift new QueueMemoryStoreTransformer @stream, @stores.memory
+#            @transformers.push new MemoryStoreTransformer @stream, @stores.memory
 
-        if @options.stores?.elasticsearch?.enabled
-            @stores.elasticsearch = new ElasticsearchStore @stream, @options.stores.elasticsearch
-            @transformers.push new ElasticsearchStoreTransformer @stream, @stores.elasticsearch
+#        if @options.stores?.elasticsearch?.enabled
+#            @stores.elasticsearch = new ElasticsearchStore @stream, @options.stores.elasticsearch
+#            @transformers.push new ElasticsearchStoreTransformer @stream, @stores.elasticsearch
 
         if @options.stores?.dynamodb?.enabled
             @stores.dynamodb = new DynamoDBStore @stream, @options.stores.dynamodb
@@ -66,21 +66,21 @@ class StreamArchiver extends require('events').EventEmitter
         _.last(@transformers).on 'readable', =>
             while seg = _.last(@transformers).read()
                 debug "Segment #{seg.id} archived"
-
-        @stream.source.on 'hls_snapshot', (snapshot) =>
-            return debug "HLS Snapshot failed via broadcast from #{@stream.key}" if not snapshot
-            debug "HLS Snapshot received via broadcast from #{@stream.key} (#{snapshot.segments.length} segments)"
-            @stream.emit 'hls_snapshot', snapshot
-
-        @stream._once_source_loaded =>
-            @stream.source.getHLSSnapshot (error, snapshot) =>
-                return debug "HLS Snapshot failed from initial source load of #{@stream.key}" if not snapshot
-                debug "HLS snapshot from initial source load of #{@stream.key} (#{snapshot.segments.length} segments)"
-                @stream.emit 'hls_snapshot', snapshot
-
-        @stream.on 'hls_snapshot', (snapshot) =>
-            for segment in snapshot.segments
-                _.first(@transformers).write segment
+#
+#        @stream.source.on 'hls_snapshot', (snapshot) =>
+#            return debug "HLS Snapshot failed via broadcast from #{@stream.key}" if not snapshot
+#            debug "HLS Snapshot received via broadcast from #{@stream.key} (#{snapshot.segments.length} segments)"
+#            @stream.emit 'hls_snapshot', snapshot
+#
+#        @stream._once_source_loaded =>
+#            @stream.source.getHLSSnapshot (error, snapshot) =>
+#                return debug "HLS Snapshot failed from initial source load of #{@stream.key}" if not snapshot
+#                debug "HLS snapshot from initial source load of #{@stream.key} (#{snapshot.segments.length} segments)"
+#                @stream.emit 'hls_snapshot', snapshot
+#
+#        @stream.on 'hls_snapshot', (snapshot) =>
+#            for segment in snapshot.segments
+#                _.first(@transformers).write segment
 
         debug "Created for #{@stream.key}"
 
@@ -94,7 +94,8 @@ class StreamArchiver extends require('events').EventEmitter
     #----------
 
     getSegmentsFromMemory: (options, callback) ->
-        return callback() if not @stores.memory
+        return callback()
+        #return callback() if not @stores.memory
         callback null, @stores.memory.getSegments(options)
 
     #----------
@@ -109,7 +110,8 @@ class StreamArchiver extends require('events').EventEmitter
     #----------
 
     getSegmentsFromElasticsearch: (options, attribute, callback) ->
-        return callback() if not @stores.elasticsearch
+        return callback()
+        #return callback() if not @stores.elasticsearch
         @stores.elasticsearch.getSegments(options, attribute)
             .then((segments) -> return callback null, segments)
             .catch(() -> callback())
@@ -137,7 +139,8 @@ class StreamArchiver extends require('events').EventEmitter
     #----------
 
     getSegmentFromMemory: (id, callback) ->
-        return callback() if not @stores.memory
+        return callback()
+        #return callback() if not @stores.memory
         callback null, @stores.memory.getSegment(id)
 
     #----------

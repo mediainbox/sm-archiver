@@ -1,4 +1,4 @@
-var AudioTransformer, DynamoDBStore, DynamoDBStoreTransformer, ElasticsearchStore, ElasticsearchStoreTransformer, ExportOutput, HlsOutput, IdTransformer, MemoryStore, MemoryStoreTransformer, PreviewTransformer, QueueMemoryStoreTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, moment, segmentKeys,
+var AudioTransformer, DynamoDBStore, DynamoDBStoreTransformer, ExportOutput, HlsOutput, IdTransformer, PreviewTransformer, S3Store, S3StoreTransformer, StreamArchiver, WavedataTransformer, WaveformTransformer, _, debug, moment, segmentKeys,
   extend = function(child, parent) { for (var key in parent) { if (hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
   hasProp = {}.hasOwnProperty;
 
@@ -15,16 +15,6 @@ WaveformTransformer = require('./transformers/waveform');
 WavedataTransformer = require('./transformers/wavedata');
 
 PreviewTransformer = require('./transformers/preview');
-
-MemoryStore = require('./stores/memory');
-
-QueueMemoryStoreTransformer = require('./transformers/stores/memory/queue');
-
-MemoryStoreTransformer = require('./transformers/stores/memory');
-
-ElasticsearchStore = require('./stores/elasticsearch');
-
-ElasticsearchStoreTransformer = require('./transformers/stores/elasticsearch');
 
 DynamoDBStore = require('./stores/dynamodb');
 
@@ -46,25 +36,16 @@ StreamArchiver = (function(superClass) {
   extend(StreamArchiver, superClass);
 
   function StreamArchiver(stream, options1) {
-    var ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7;
+    var ref, ref1, ref2, ref3;
     this.stream = stream;
     this.options = options1;
     this.stores = {};
     this.transformers = [new AudioTransformer(this.stream), new WaveformTransformer(this.stream, this.options.pixels_per_second)];
-    if ((ref = this.options.stores) != null ? (ref1 = ref.memory) != null ? ref1.enabled : void 0 : void 0) {
-      this.stores.memory = new MemoryStore(this.stream, this.options.stores.memory);
-      this.transformers.unshift(new QueueMemoryStoreTransformer(this.stream, this.stores.memory));
-      this.transformers.push(new MemoryStoreTransformer(this.stream, this.stores.memory));
-    }
-    if ((ref2 = this.options.stores) != null ? (ref3 = ref2.elasticsearch) != null ? ref3.enabled : void 0 : void 0) {
-      this.stores.elasticsearch = new ElasticsearchStore(this.stream, this.options.stores.elasticsearch);
-      this.transformers.push(new ElasticsearchStoreTransformer(this.stream, this.stores.elasticsearch));
-    }
-    if ((ref4 = this.options.stores) != null ? (ref5 = ref4.dynamodb) != null ? ref5.enabled : void 0 : void 0) {
+    if ((ref = this.options.stores) != null ? (ref1 = ref.dynamodb) != null ? ref1.enabled : void 0 : void 0) {
       this.stores.dynamodb = new DynamoDBStore(this.stream, this.options.stores.dynamodb);
       this.transformers.push(new DynamoDBStoreTransformer(this.stream, this.stores.dynamodb));
     }
-    if ((ref6 = this.options.stores) != null ? (ref7 = ref6.s3) != null ? ref7.enabled : void 0 : void 0) {
+    if ((ref2 = this.options.stores) != null ? (ref3 = ref2.s3) != null ? ref3.enabled : void 0 : void 0) {
       this.stores.s3 = new S3Store(this.stream, this.options.stores.s3);
       this.transformers.push(new S3StoreTransformer(this.stream, this.stores.s3));
     }
@@ -88,38 +69,6 @@ StreamArchiver = (function(superClass) {
         return results;
       };
     })(this));
-    this.stream.source.on('hls_snapshot', (function(_this) {
-      return function(snapshot) {
-        if (!snapshot) {
-          return debug("HLS Snapshot failed via broadcast from " + _this.stream.key);
-        }
-        debug("HLS Snapshot received via broadcast from " + _this.stream.key + " (" + snapshot.segments.length + " segments)");
-        return _this.stream.emit('hls_snapshot', snapshot);
-      };
-    })(this));
-    this.stream._once_source_loaded((function(_this) {
-      return function() {
-        return _this.stream.source.getHLSSnapshot(function(error, snapshot) {
-          if (!snapshot) {
-            return debug("HLS Snapshot failed from initial source load of " + _this.stream.key);
-          }
-          debug("HLS snapshot from initial source load of " + _this.stream.key + " (" + snapshot.segments.length + " segments)");
-          return _this.stream.emit('hls_snapshot', snapshot);
-        });
-      };
-    })(this));
-    this.stream.on('hls_snapshot', (function(_this) {
-      return function(snapshot) {
-        var i, len, ref8, results, segment;
-        ref8 = snapshot.segments;
-        results = [];
-        for (i = 0, len = ref8.length; i < len; i++) {
-          segment = ref8[i];
-          results.push(_.first(_this.transformers).write(segment));
-        }
-        return results;
-      };
-    })(this));
     debug("Created for " + this.stream.key);
   }
 
@@ -135,9 +84,7 @@ StreamArchiver = (function(superClass) {
   };
 
   StreamArchiver.prototype.getSegmentsFromMemory = function(options, callback) {
-    if (!this.stores.memory) {
-      return callback();
-    }
+    return callback();
     return callback(null, this.stores.memory.getSegments(options));
   };
 
@@ -158,9 +105,7 @@ StreamArchiver = (function(superClass) {
   };
 
   StreamArchiver.prototype.getSegmentsFromElasticsearch = function(options, attribute, callback) {
-    if (!this.stores.elasticsearch) {
-      return callback();
-    }
+    return callback();
     return this.stores.elasticsearch.getSegments(options, attribute).then(function(segments) {
       return callback(null, segments);
     })["catch"](function() {
@@ -198,9 +143,7 @@ StreamArchiver = (function(superClass) {
   };
 
   StreamArchiver.prototype.getSegmentFromMemory = function(id, callback) {
-    if (!this.stores.memory) {
-      return callback();
-    }
+    return callback();
     return callback(null, this.stores.memory.getSegment(id));
   };
 

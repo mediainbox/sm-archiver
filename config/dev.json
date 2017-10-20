@@ -1,6 +1,4 @@
 {
   "mode": "master",
-  "uri": "https://vl0b3fvvm5.execute-api.us-east-1.amazonaws.com/prod/index?ping=archiver&name=desa",
-  "gCloudProjectId": "",
-  "gCloudKeyFilename": ""
+  "uri": "https://s3.amazonaws.com/mediainbox-dev-logger/sm-archiver/dev-new-logger.mp3/services-mock/desa-archiver.json"
 }

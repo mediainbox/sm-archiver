@@ -19,7 +19,6 @@ Runner = (function() {
   Runner.prototype.initialize = function() {
     return this.getRadio((function(_this) {
       return function(radio) {
-        _this.ping();
         return _this.createArchiver(radio);
       };
     })(this));

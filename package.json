@@ -59,7 +59,8 @@
     "migrate": "./migrator-cmd",
     "migrate:debug": "grunt; DEBUG='sm:migrator*' npm run migrate",
     "docker:migrate:debug": "npm run docker -- npm run migrate:debug",
-    "docker:migrate:debug:testing": "npm run docker:migrate:debug -- -- -- --config config/testing.json"
+    "docker:migrate:debug:testing": "npm run docker:migrate:debug -- -- -- --config config/testing.json",
+    "start:server-only": "grunt && DEBUG=sm:* node js/src/runner.js --config config/dev.json"
   },
   "bin": {
     "sm-archiver": "./runner-cmd"
