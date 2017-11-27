@@ -14,7 +14,7 @@ Archiver = (function(superClass) {
   extend(Archiver, superClass);
 
   function Archiver(options) {
-    var stream;
+    var format, key, keyParts, stream;
     this.options = options;
     this.streams = {};
     this.stream_groups = {};
@@ -24,10 +24,13 @@ Archiver = (function(superClass) {
     this.log = new Logger({
       stdout: true
     });
+    key = this.options.streams[0];
+    keyParts = key.match(/(.*)\.(\w{3})$/i);
+    format = keyParts ? keyParts[2] : 'mp3';
     stream = {
-      key: this.options.streams[0],
+      key: key,
       opts: {
-        format: 'mp3',
+        format: format,
         codec: null
       }
     };

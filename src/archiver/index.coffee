@@ -20,10 +20,15 @@ class Archiver extends require 'streammachine/js/src/streammachine/slave'
 #        @io.on 'disconnected', ->
 #            debug 'Disconnected from master'
 
+        key = @options.streams[0]
+
+        keyParts = key.match /(.*)\.(\w{3})$/i
+        format = if keyParts then keyParts[2] else 'mp3'
+
         stream =
-            key: @options.streams[0]
+            key: key
             opts:
-                format: 'mp3'
+                format: format
                 codec: null
 
         @streams = {}
